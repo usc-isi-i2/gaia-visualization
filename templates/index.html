@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Index</title>
+</head>
+<body>
+<h1>Viz</h1>
+<ol>
+    <li><a href="/viz/all_clusters">all clusters</a></li>
+    <li><a href="/viz/cluster_with_source">cluster with source</a></li>
+</ol>
+
+{% if entities or events %}
+<h1>Clusters Top10</h1>
+    {% if entities %}
+    <h2>Entities</h2>
+        {% for cluster in entities %}
+            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+        {% endfor %}
+    {% endif %}
+    {% if events %}
+    <h2>Events</h2>
+        {% for cluster in events %}
+            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+        {% endfor %}
+    {% endif %}
+{% endif %}
+</body>
+</html>

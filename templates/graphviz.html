@@ -1,0 +1,64 @@
+ <html>
+	<head>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css">
+		<link rel="stylesheet" href="/css/graphviz.svg.css">
+    <title>Viz: Clusters with sources</title>
+	</head>
+	<body>
+		<div id="graph" style="width: 100%; height: 100%; overflow: scroll;"></div>
+
+		<script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+		<script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-mousewheel/master/jquery.mousewheel.min.js"></script>
+		<script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-color/master/jquery.color.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
+		<script type="text/javascript" src="/js/jquery.graphviz.svg.js"></script>
+		<script type="text/javascript">
+ 		 $(document).ready(function() {
+             $(document).on("click", function(e) {
+                 if (!(e.metaKey || (navigator.platform.toUpperCase().indexOf('WIN')!==-1 && e.ctrlKey))) {
+                     e.preventDefault();
+                 }
+             });
+             let graph = $("#graph");
+             let minWidth = graph.width();
+             let minHeight = graph.height();
+             var maxWidth = 0;
+             var maxHeight = 0;
+             graph.graphviz({
+                 url: "/img/{{ name }}.svg",
+                 ready: function() {
+                     let gv = this;
+                     maxWidth = graph.children()[0].viewBox.baseVal.width;
+                     maxHeight = graph.children()[0].viewBox.baseVal.height;
+                     gv.nodes().click(function () {
+                         let $set = $();
+                         $set.push(this);
+                         $set = $set.add(gv.linkedFrom(this, true));
+                         $set = $set.add(gv.linkedTo(this, true));
+                         gv.highlight($set, true);
+                         gv.bringToFront($set);
+                     });
+                     $(document).keydown(function (e) {
+                         if (e.keyCode == 27) {;
+                             gv.highlight();
+                         }
+                     });
+                 }
+             });
+             function scaleSVG(delta) {
+                 let scale = 1 + delta * 0.01;
+                 let width = Math.min(maxWidth, Math.max(graph.width() * scale, minWidth));
+                 let height = Math.min(maxHeight, Math.max(graph.height() * scale, minHeight));
+                 graph.css('width', width);
+                 graph.css('height', height);
+             }
+             window.addEventListener('wheel', (e) => {
+                 if (e.ctrlKey) {
+                     e.preventDefault();
+                     scaleSVG(e.deltaY);
+                 }
+             });
+     });
+		</script>
+	</body>
+</html>

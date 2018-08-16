@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cluster</title>
+</head>
+<body>
+    <h1>{{ cluster.label }} ( {{ cluster.type }} )</h1>
+    <ul>
+        <li>URI: {{ cluster.uri }}</li>
+        <li>Label: {{ cluster.label }}</li>
+        <li>Type: {{ cluster.prototype.type }}</li>
+    </ul>
+    <h2>Members</h2>
+    <ol>
+    {% for member in cluster.members %}
+            <li>{{ member.uri }}</li>
+            <ul>
+                <li>Label: {{ member.label }}</li>
+                <li>Type: {{ member.type }}</li>
+            {% if member.source %}
+                <li>Source:
+                    {% if member.source_url %}
+                        <a href="{{ member.source_url }}">{{ member.source }}</a>
+                    {% else %}
+                        {{ member.source }}
+                    {% endif %}
+                    <ul>
+                        {% for mention in member.mention %}
+                            <li>{{ mention }}</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endif %}
+            </ul>
+    {% endfor %}
+    </ol>
+</body>
+</html>
