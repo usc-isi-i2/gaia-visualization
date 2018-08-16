@@ -1,7 +1,7 @@
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
 from source_context import SourceContext
 from rdflib import URIRef, Literal
-from rdflib.namespace import Namespace, SKOS
+from rdflib.namespace import Namespace, SKOS, RDF
 from collections import namedtuple
 endpoint = 'http://kg2018a.isi.edu:3030/all_clusters/sparql'
 sparql = SPARQLStore(endpoint)
@@ -10,6 +10,7 @@ AIDA = Namespace('http://darpa.mil/aida/interchangeOntology#')
 namespaces = {
     'aida': AIDA,
     'skos': SKOS,
+    'rdf': RDF,
     'xij': Namespace('http://isi.edu/xij-rule-set#')
 }
 
@@ -28,6 +29,8 @@ class Cluster:
         self.__prototype = None
         self.__type = None
         self.__members = []
+        self.__forward = None
+        self.__backward = None
 
     @property
     def href(self):
@@ -54,6 +57,40 @@ class Cluster:
         if not self.__members:
             self._init_cluster_members()
         return self.__members
+
+    @property
+    def forward(self):
+        if self.__forward is None:
+            self.__forward = set()
+            self._init_forward_clusters()
+        return self.__forward
+
+    @property
+    def backward(self):
+        if self.__backward is None:
+            self.__backward = set()
+            self._init_backward_clusters()
+        return self.__backward
+
+    @property
+    def neighbors(self):
+        return self.forward | self.backward
+
+    def neighborhood(self, hop=2):
+        if hop <= 1:
+            return self.neighbors
+        hood = set()
+        for neighbor in self.neighbors:
+            hood |= neighbor.subject.neighborhood(hop-1)
+            hood |= neighbor.object.neighborhood(hop-1)
+        return hood
+
+    @property
+    def img(self):
+        from graph import SuperEdgeBasedGraph
+        graph = SuperEdgeBasedGraph(self.neighborhood(), self.uri)
+        path = graph.dot()
+        return graph.name
 
     @classmethod
     def ask(cls, uri):
@@ -87,6 +124,50 @@ WHERE {
 } """
         for member, label, type_ in sparql.query(query, namespaces, {'cluster': self.uri}):
             self.__members.append(ClusterMember(member, label, type_))
+
+    def _init_forward_clusters(self):
+        query = """
+SELECT ?p ?o ?cnt
+WHERE {
+  ?se rdf:subject ?s ;
+      rdf:predicate ?p ;
+      rdf:object ?o ;
+      aida:edgeCount ?cnt .
+}
+        """
+        for p, o, cnt in sparql.query(query, namespaces, {'s': self.uri}):
+            self.__forward.add(SuperEdge(self, Cluster(o), p, int(cnt)))
+
+    def _init_backward_clusters(self):
+        query = """
+SELECT ?s ?p ?cnt
+WHERE {
+  ?se rdf:subject ?s ;
+      rdf:predicate ?p ;
+      rdf:object ?o ;
+      aida:edgeCount ?cnt .
+}
+        """
+        for s, p, cnt in sparql.query(query, namespaces, {'o': self.uri}):
+            self.__backward.add(SuperEdge(Cluster(s), self, p, int(cnt)))
+
+    def __hash__(self):
+        return self.uri.__hash__()
+
+
+class SuperEdge:
+    def __init__(self, s: Cluster, o: Cluster, p: URIRef, n: int):
+        self.subject = s
+        self.predicate = p
+        self.object = o
+        self.count = n
+
+    def __hash__(self):
+        return hash((self.subject.uri, self.predicate, self.object.uri))
+
+    def __eq__(self, other):
+        return isinstance(other, SuperEdge) and str(self.subject) == str(other.subject) and str(self.predicate) == str(
+            other.predicate) and str(self.object) == str(other.object)
 
 
 class ClusterMember:
@@ -151,8 +232,12 @@ ORDER BY ?start
     def mention(self):
         for start, end in self.__context_pos:
             res = context.get_some_context(self.source, start, end, 100)
-            if not res: continue
+            if not res:
+                continue
             yield res
+
+    def __hash__(self):
+        return self.uri.__hash__()
 
 
 ClusterSummary = namedtuple('ClusterSummary', ['uri', 'href', 'label', 'count'])

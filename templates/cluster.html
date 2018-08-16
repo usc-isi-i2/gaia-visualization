@@ -11,6 +11,7 @@
         <li>Label: {{ cluster.label }}</li>
         <li>Type: {{ cluster.prototype.type }}</li>
     </ul>
+    <iframe src="/viz/{{ cluster.img }}" height="70%" width="100%"></iframe>
     <h2>Members</h2>
     <ol>
     {% for member in cluster.members %}
