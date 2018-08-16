@@ -36,7 +36,7 @@ class Graph:
         with open(dotpath, 'w') as f:
             f.write(self.to_draw())
         imgpath = prefix+'.'+format.lower()
-        e = subprocess.call(['dot', '-T' + format.lower(), '-o', imgpath, dotpath, '-Ksfdp', '-Goverlap=prism'])
+        e = subprocess.call(['dot', '-T' + format.lower(), '-o', imgpath, dotpath, '-Ksfdp', '-Goverlap=scaling'])
         print(e)
         return imgpath
 
@@ -152,23 +152,28 @@ class ClusterGraph(Graph):
 
 
 class SuperEdgeBasedGraph(ClusterGraph):
-    def __init__(self, superedges: List[SuperEdge], name=None):
-        nodes = set()
+    def __init__(self, superedges: List[SuperEdge], base=None, name=None):
+        nodes = {self._cluster_node_from_cluster(base)} if base else set()
         edges = set()
         for se in superedges:
             sub, obj, pred = se.subject, se.object, se.predicate
-            nodes.add(ClusterNode(sub.uri, len(sub.members), sub.label, type_=sub.prototype.type))
-            nodes.add(ClusterNode(obj.uri, len(obj.members), obj.label, type_=obj.prototype.type))
+            nodes.add(self._cluster_node_from_cluster(sub))
+            nodes.add(self._cluster_node_from_cluster(obj))
             edges.add(ClusterEdge(sub.uri, obj.uri, pred, se.count))
         if isinstance(name, str) and name.startswith('http'):
             _, name = split_uri(name)
         super().__init__(nodes, edges, name)
 
+    @staticmethod
+    def _cluster_node_from_cluster(cluster):
+        return ClusterNode(cluster.uri, len(cluster.members), cluster.label, type_=cluster.prototype.type)
+
 
 if __name__ == '__main__':
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/51e3a4de-4e48-4041-b083-a56b351cda37-cluster')
+    # cluster = get_cluster('http://www.isi.edu/gaia/entities/51e3a4de-4e48-4041-b083-a56b351cda37-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/events/0005496c-5fce-43db-86b4-ea4466ca8199-cluster')
     neighborhood = cluster.neighborhood()
-    graph = SuperEdgeBasedGraph(neighborhood, cluster.uri)
+    graph = SuperEdgeBasedGraph(neighborhood, cluster, cluster.uri)
     dot_string = graph.dot()
 
 

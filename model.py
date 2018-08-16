@@ -88,7 +88,7 @@ class Cluster:
     @property
     def img(self):
         from graph import SuperEdgeBasedGraph
-        graph = SuperEdgeBasedGraph(self.neighborhood(), self.uri)
+        graph = SuperEdgeBasedGraph(self.neighborhood(), self, self.uri)
         path = graph.dot()
         return graph.name
 
