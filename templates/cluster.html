@@ -22,11 +22,7 @@
                 <li>Type: {{ member.type }}</li>
             {% if member.source %}
                 <li>Source:
-                    {% if member.source_url %}
-                        <a href="{{ member.source_url }}">{{ member.source }}</a>
-                    {% else %}
-                        {{ member.source }}
-                    {% endif %}
+                    {{ member.source }}
                     <ul>
                         {% for mention in member.mention %}
                             <li>{{ mention }}</li>

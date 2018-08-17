@@ -36,7 +36,9 @@ class Graph:
         with open(dotpath, 'w') as f:
             f.write(self.to_draw())
         imgpath = prefix+'.'+format.lower()
-        e = subprocess.call(['dot', '-T' + format.lower(), '-o', imgpath, dotpath, '-Ksfdp', '-Goverlap=scaling'])
+        e = subprocess.call(
+            ['dot', '-T' + format.lower(), '-o', imgpath, dotpath, '-Ksfdp', '-Goverlap=prism', '-Goverlap_scaling=5',
+             '-Gsep=+20'])
         print(e)
         return imgpath
 
@@ -138,6 +140,8 @@ class ClusterEdge(Edge):
         if pred and pred.startswith('http'):
             _, pred = split_uri(pred)
         self.config['label'] = self.edge_label_justify(pred, count)
+        self.set_color('#d62728')
+        self.config['arrowsize'] = '0.7'
 
     def edge_label_justify(self, label, count, max_width=20):
         words = label + " (×{})".format(count)
@@ -153,25 +157,24 @@ class ClusterGraph(Graph):
 
 class SuperEdgeBasedGraph(ClusterGraph):
     def __init__(self, superedges: List[SuperEdge], base=None, name=None):
-        nodes = {self._cluster_node_from_cluster(base)} if base else set()
+        nodes = {base} if base else set()
         edges = set()
         for se in superedges:
             sub, obj, pred = se.subject, se.object, se.predicate
-            nodes.add(self._cluster_node_from_cluster(sub))
-            nodes.add(self._cluster_node_from_cluster(obj))
+            nodes.add(sub)
+            nodes.add(obj)
             edges.add(ClusterEdge(sub.uri, obj.uri, pred, se.count))
         if isinstance(name, str) and name.startswith('http'):
             _, name = split_uri(name)
-        super().__init__(nodes, edges, name)
+        super().__init__([self._cluster_node_from_cluster(c) for c in nodes], edges, name)
 
     @staticmethod
     def _cluster_node_from_cluster(cluster):
-        return ClusterNode(cluster.uri, len(cluster.members), cluster.label, type_=cluster.prototype.type)
+        return ClusterNode(cluster.uri, cluster.size, cluster.label, type_=cluster.prototype.type)
 
 
 if __name__ == '__main__':
-    # cluster = get_cluster('http://www.isi.edu/gaia/entities/51e3a4de-4e48-4041-b083-a56b351cda37-cluster')
-    cluster = get_cluster('http://www.isi.edu/gaia/events/0005496c-5fce-43db-86b4-ea4466ca8199-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/entities/fa507fd2-51db-4390-a213-156287a95db9-cluster')
     neighborhood = cluster.neighborhood()
     graph = SuperEdgeBasedGraph(neighborhood, cluster, cluster.uri)
     dot_string = graph.dot()

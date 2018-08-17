@@ -3,12 +3,13 @@ from source_context import SourceContext
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, SKOS, RDF
 from collections import namedtuple
-endpoint = 'http://kg2018a.isi.edu:3030/all_clusters/sparql'
+endpoint = 'http://gaiadev01.isi.edu:3030/gaiaold/query'
 sparql = SPARQLStore(endpoint)
-context = SourceContext()
 AIDA = Namespace('http://darpa.mil/aida/interchangeOntology#')
+NIST = Namespace('https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#')
 namespaces = {
     'aida': AIDA,
+    'nist': NIST,
     'skos': SKOS,
     'rdf': RDF,
     'xij': Namespace('http://isi.edu/xij-rule-set#')
@@ -59,6 +60,12 @@ class Cluster:
         return self.__members
 
     @property
+    def size(self):
+        if self.__members:
+            return len(self.__members)
+        return self._query_for_size()
+
+    @property
     def forward(self):
         if self.__forward is None:
             self.__forward = set()
@@ -94,7 +101,7 @@ class Cluster:
 
     @classmethod
     def ask(cls, uri):
-        query = "ASK { ?cluster a aida:SameAsCluster }"
+        query = "ASK { ?cluster a nist:SameAsCluster }"
         for ans in sparql.query(query, namespaces, {'cluster': URIRef(uri)}):
             return ans
         return False
@@ -103,12 +110,14 @@ class Cluster:
         query = """
 SELECT ?prototype ?label ?type ?category
 WHERE {
-  ?cluster aida:prototype ?prototype .
+  ?cluster nist:prototype ?prototype .
   ?prototype a ?type ;
              a ?category ;
-             skos:prefLabel ?label .
+             aida:hasName ?label .
+             # skos:prefLabel ?label .
   FILTER (?type NOT IN (aida:Entity, aida:Event) && ?category IN (aida:Entity, aida:Event))
-} """
+} 
+LIMIT 1 """
         for prototype, label, type_, cate in sparql.query(query, namespaces, {'cluster': self.uri}):
             self.__prototype = ClusterMember(prototype, label, type_)
             self.__type = cate
@@ -151,6 +160,16 @@ WHERE {
         for s, p, cnt in sparql.query(query, namespaces, {'o': self.uri}):
             self.__backward.add(SuperEdge(Cluster(s), self, p, int(cnt)))
 
+    def _query_for_size(self):
+        query = """
+SELECT (COUNT(?member) AS ?size)
+WHERE {
+  ?member xij:inCluster ?cluster .
+} """
+        for size, in sparql.query(query, namespaces, {'cluster': self.uri}):
+            return int(size)
+        return 0
+
     def __hash__(self):
         return self.uri.__hash__()
 
@@ -177,6 +196,7 @@ class ClusterMember:
         self.__type = type_
         self.__source = None
         self.__context_pos = []
+        self.__context_extractor = None
 
     @property
     def label(self):
@@ -189,6 +209,12 @@ class ClusterMember:
         if not self.__type:
             self._init_member()
         return self.__type
+
+    @property
+    def context_extractor(self):
+        if self.__context_extractor is None:
+            self.__context_extractor = SourceContext(self.source)
+        return self.__context_extractor
 
     def _init_member(self):
         query = """
@@ -218,11 +244,6 @@ ORDER BY ?start
             self.__context_pos.append((int(start), int(end)))
 
     @property
-    def source_url(self):
-        if self.source in context.map:
-            return context.map[self.source]['URL']
-
-    @property
     def source(self):
         if not self.__source:
             self._init_source()
@@ -230,11 +251,12 @@ ORDER BY ?start
 
     @property
     def mention(self):
-        for start, end in self.__context_pos:
-            res = context.get_some_context(self.source, start, end, 100)
-            if not res:
-                continue
-            yield res
+        if self.context_extractor.doc_exists():
+            for start, end in self.__context_pos:
+                res = self.context_extractor.query_context(start, end)
+                if not res:
+                    continue
+                yield res
 
     def __hash__(self):
         return self.uri.__hash__()
@@ -247,7 +269,7 @@ def get_cluster_list(type_=None):
     query = """
 SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
-  ?cluster aida:prototype ?prototype .
+  ?cluster nist:prototype ?prototype .
   ?prototype a ?type ;
              skos:prefLabel ?label .
   ?member xij:inCluster ?cluster .
@@ -255,10 +277,18 @@ WHERE {
 GROUP BY ?cluster ?label
 ORDER BY DESC(?memberN)
 LIMIT 10 """
-    # bind = {'type': type_} if type_ in {AIDA.Entity, AIDA.Event} else {}
-    # return {ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster'), l, c)
-    #         for u, l, c in sparql.query(query, namespaces, bind)}
     if type_ in {AIDA.Entity, AIDA.Event}:
         query = query.replace('?type', type_.n3())
     return [ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster'), l, c)
             for u, l, c in sparql.query(query, namespaces)]
+
+
+if __name__ == '__main__':
+    # cluster = get_cluster('http://www.isi.edu/gaia/entities/5f629fdd-4be5-4d32-ba7a-48f6713f62ee-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/entities/fa507fd2-51db-4390-a213-156287a95db9-cluster')
+    print(cluster.label, cluster.uri, cluster.type, cluster.prototype.type)
+    print(cluster.size)
+    # for member in cluster.members:
+    #     print(member.label, member.type, member.source)
+    #     for mention in member.mention:
+    #         print(mention)
