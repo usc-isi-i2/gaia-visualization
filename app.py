@@ -27,8 +27,13 @@ def static_css(path):
 
 
 @app.route('/viz/<name>')
+def show_bidirection_viz(name):
+    return render_template('viz.html', name=name)
+
+@app.route('/sviz/<name>')
 def show_viz(name):
-    return render_template('graphviz.html', name=name)
+    return render_template('sviz.html', name=name)
+
 
 
 @app.route('/cluster/entities/<uri>')

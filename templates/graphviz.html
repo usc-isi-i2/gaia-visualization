@@ -33,8 +33,7 @@
                      gv.nodes().click(function () {
                          let $set = $();
                          $set.push(this);
-                         $set = $set.add(gv.linkedFrom(this, true));
-                         $set = $set.add(gv.linkedTo(this, true));
+                         {% block highlight_strategy %}{% endblock %}
                          gv.highlight($set, true);
                          gv.bringToFront($set);
                      });
