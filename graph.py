@@ -3,9 +3,11 @@ from typing import List
 from model import SuperEdge, get_cluster
 import uuid
 import subprocess
+import pickle
 
 SVG = 'SVG'
 PNG = 'PNG'
+clusters = pickle.load(open('cluster.pkl', 'rb'))
 
 
 class Graph:
@@ -166,11 +168,16 @@ class SuperEdgeBasedGraph(ClusterGraph):
             edges.add(ClusterEdge(sub.uri, obj.uri, pred, se.count))
         if isinstance(name, str) and name.startswith('http'):
             _, name = split_uri(name)
-        super().__init__([self._cluster_node_from_cluster(c) for c in nodes], edges, name)
+        super().__init__([self._cluster_node_from_pickle(c.uri) for c in nodes], edges, name)
 
     @staticmethod
     def _cluster_node_from_cluster(cluster):
         return ClusterNode(cluster.uri, cluster.size, cluster.label, type_=cluster.prototype.type)
+
+    @staticmethod
+    def _cluster_node_from_pickle(uri):
+        c = clusters[uri]
+        return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
 
 
 if __name__ == '__main__':

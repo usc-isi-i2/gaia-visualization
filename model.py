@@ -284,11 +284,6 @@ LIMIT 10 """
 
 
 if __name__ == '__main__':
-    # cluster = get_cluster('http://www.isi.edu/gaia/entities/5f629fdd-4be5-4d32-ba7a-48f6713f62ee-cluster')
     cluster = get_cluster('http://www.isi.edu/gaia/entities/fa507fd2-51db-4390-a213-156287a95db9-cluster')
     print(cluster.label, cluster.uri, cluster.type, cluster.prototype.type)
     print(cluster.size)
-    # for member in cluster.members:
-    #     print(member.label, member.type, member.source)
-    #     for mention in member.mention:
-    #         print(mention)
