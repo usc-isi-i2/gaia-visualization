@@ -55,9 +55,8 @@ WHERE {
              rdf:predicate rdf:type ;
              rdf:object ?type .
 } """
-for cluster, type_ in sparql.query(query, initNs=namespaces):
-    _, label = split_uri(type_)
-    data[cluster]['label'] = label
+for cluster, in sparql.query(query, initNs=namespaces):
+    data[cluster]['label'] = ''
     data[cluster]['type'] = AIDA.Relation
 
 pickle.dump(data, open('cluster.pkl', 'wb'))

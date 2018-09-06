@@ -1,6 +1,6 @@
 from rdflib.namespace import split_uri
 from typing import List
-from model import SuperEdge, get_cluster
+from model import SuperEdge, get_cluster, AIDA
 import uuid
 import subprocess
 import pickle
@@ -112,8 +112,9 @@ type_color_map = {
     'Location': '#8c564b',
     'Organization': '#9467bd',
     'Person': '#1f77b4',
-    'FillerType': '#ff7f0e'
+    'FillerType': '#ff7f0e',
     # Event
+    'Relation': '#ff7f0e'
 }
 
 
@@ -124,6 +125,8 @@ class ClusterNode(Node):
             self.set_color(type_)
         if label:
             self.config['label'] = self.node_label_justify(label, count)
+        else:
+            self.config['label'] = ''
 
     def set_color(self, type_):
         if isinstance(type_, str) and type_.startswith('http'):
@@ -140,8 +143,11 @@ class ClusterEdge(Edge):
     def __init__(self, sub, obj, pred, count, config=None):
         super().__init__(sub, obj, config)
         if pred and pred.startswith('http'):
-            _, pred = split_uri(pred)
+            ind = pred.find('_')
+            pred = pred[ind+1:]
+            # _, pred = split_uri(pred)
         self.config['label'] = self.edge_label_justify(pred, count)
+        # self.config['label'] = pred
         self.set_color('#d62728')
         self.config['arrowsize'] = '0.7'
 
@@ -168,6 +174,7 @@ class SuperEdgeBasedGraph(ClusterGraph):
             edges.add(ClusterEdge(sub.uri, obj.uri, pred, se.count))
         if isinstance(name, str) and name.startswith('http'):
             _, name = split_uri(name)
+        # super().__init__([self._cluster_node_from_cluster(c) for c in nodes], edges, name)
         super().__init__([self._cluster_node_from_pickle(c.uri) for c in nodes], edges, name)
 
     @staticmethod
@@ -181,9 +188,7 @@ class SuperEdgeBasedGraph(ClusterGraph):
 
 
 if __name__ == '__main__':
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/fa507fd2-51db-4390-a213-156287a95db9-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/entities/a38267dd-499f-45bd-aa22-7b474781f193-cluster')
     neighborhood = cluster.neighborhood()
     graph = SuperEdgeBasedGraph(neighborhood, cluster, cluster.uri)
     dot_string = graph.dot()
-
-
