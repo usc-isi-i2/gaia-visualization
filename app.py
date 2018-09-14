@@ -1,5 +1,6 @@
 from flask import Flask, render_template, abort
 from model import get_cluster, get_cluster_list, types
+from report import Report
 
 app = Flask(__name__, static_folder='static')
 
@@ -30,10 +31,10 @@ def static_css(path):
 def show_bidirection_viz(name):
     return render_template('viz.html', name=name)
 
+
 @app.route('/sviz/<name>')
 def show_viz(name):
     return render_template('sviz.html', name=name)
-
 
 
 @app.route('/cluster/entities/<uri>')
@@ -55,6 +56,12 @@ def show_cluster(uri):
     if not cluster:
         abort(404)
     return render_template('cluster.html', cluster=cluster)
+
+
+@app.route('/report')
+def show_report():
+    report = Report()
+    return render_template('report.html', report=report)
 
 
 if __name__ == '__main__':
