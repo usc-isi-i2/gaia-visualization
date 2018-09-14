@@ -86,7 +86,14 @@ class Cluster:
     def neighbors(self):
         return self.forward | self.backward
 
-    def neighborhood(self, hop=2):
+    def neighborhood(self, hop=1):
+        if hop == 1 and self.prototype.type != AIDA.Relation:
+            hood = self.neighbors
+            # for neighbor in [x for x in self.neighbors if x.subject.proto]
+            for neighbor in self.neighbors:
+                if neighbor.subject.prototype.type == AIDA.Relation:
+                    hood |= neighbor.subject.neighbors
+            return hood
         if hop <= 1:
             return self.neighbors
         hood = set()
