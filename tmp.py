@@ -13,7 +13,7 @@ WHERE {
               aida:clusterMember ?member .
 }
 GROUP BY ?cluster """
-for cluster, size in sparql.query(query, initNs=namespaces):
+for cluster, size in sparql.query(query, namespaces):
     data[cluster]['size'] = size
 
 # Entity
@@ -26,7 +26,7 @@ WHERE {
              rdf:predicate rdf:type ;
              rdf:object ?category .
 } """
-for cluster, label, type_ in sparql.query(query, initNs=namespaces):
+for cluster, label, type_ in sparql.query(query, namespaces):
     data[cluster]['label'] = label
     data[cluster]['type'] = type_
 
@@ -40,7 +40,7 @@ WHERE {
              rdf:predicate rdf:type ;
              rdf:object ?category .
 } """
-for cluster, type_ in sparql.query(query, initNs=namespaces):
+for cluster, type_ in sparql.query(query, namespaces):
     _, label = split_uri(type_)
     data[cluster]['label'] = label
     data[cluster]['type'] = type_
@@ -55,7 +55,7 @@ WHERE {
              rdf:predicate rdf:type ;
              rdf:object ?type .
 } """
-for cluster, type_ in sparql.query(query, initNs=namespaces):
+for cluster, type_ in sparql.query(query, namespaces):
     _, label = split_uri(type_)
     data[cluster]['label'] = label
     data[cluster]['type'] = AIDA.Relation
