@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Report</title>
+</head>
+<body>
+<h1>Report for {{ report.name }}</h1>
+
+<h2> Entity </h2>
+<table>
+    <thead>
+    <tr>
+        <th align="right"> Kind </th>
+        <th> Entity </th>
+        <th> Cluster </th>
+        <th> Ratio </th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <th align="right"> Total</th>
+        <td>{{ '{0:,}'.format(report.num_of_entities|int) }}</td>
+        <td>{{ '{0:,}'.format(report.num_of_entity_clusters|int) }}</td>
+        <td>{{ '{:,.2f}'.format(report.num_of_entity_clusters / report.num_of_entities|int) }}</td>
+    </tr>
+    {% for type_ in report.map_of_entity_types|dictsort %}
+    <tr>
+        <th align="right">{{ type_[0] }}</th>
+        <td>{{ '{0:,}'.format(type_[1]) }}</td>
+        <td>{{ '{0:,}'.format(report.map_of_entity_cluster_types[type_[0]]) }}</td>
+        <td>{{ '{:,.2f}'.format(report.map_of_entity_cluster_types[type_[0]] / type_[1]) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<h2> Event </h2>
+<table>
+    <thead>
+    <tr>
+        <th align="right"> Kind </th>
+        <th> Event </th>
+        <th> Cluster </th>
+        <td> Ratio </td>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <th align="right"> Total </th>
+        <td>{{ '{0:,}'.format(report.num_of_events) }}</td>
+        <td>{{ '{0:,}'.format(report.num_of_event_clusters) }}</td>
+        <td>{{ '{:,.2f}'.format(report.num_of_event_clusters / report.num_of_events) }}</td>
+    </tr>
+    {% for type_ in report.map_of_event_types|dictsort %}
+    <tr>
+        <th align="right">{{ type_[0] }}</th>
+        <td>{{ '{0:,}'.format(type_[1]) }}</td>
+        <td>{{ '{0:,}'.format(report.map_of_event_cluster_types[type_[0]]) }}</td>
+        <td>{{ '{:,.2f}'.format(report.map_of_event_cluster_types[type_[0]] / type_[1]) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<h2> Relation </h2>
+<table>
+    <thead>
+    <tr>
+        <th align="right"> Kind </th>
+        <th> Relation </th>
+        <th> Cluster </th>
+        <th> Ratio </th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr>
+        <th align="right"> Total </th>
+        <td>{{ '{0:,}'.format(report.num_of_relations) }}</td>
+        <td>{{ '{0:,}'.format(report.num_of_relation_clusters) }}</td>
+        <td>{{ '{:,.2f}'.format(report.num_of_relation_clusters / report.num_of_relations) }}</td>
+    </tr>
+    {% for type_ in report.map_of_relation_types|dictsort %}
+    <tr>
+        <th align="right">{{ type_[0] }}</th>
+        <td>{{ '{0:,}'.format(type_[1]) }}</td>
+        <td>{{ '{0:,}'.format(report.map_of_relation_cluster_types[type_[0]]) }}</td>
+        <td>{{ '{:,.2f}'.format(report.map_of_relation_cluster_types[type_[0]] / type_[1]) }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>

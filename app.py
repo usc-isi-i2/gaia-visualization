@@ -1,5 +1,6 @@
 from flask import Flask, render_template, abort
 from model import get_cluster, get_cluster_list, types
+from report import Report
 
 app = Flask(__name__, static_folder='static')
 
@@ -27,8 +28,13 @@ def static_css(path):
 
 
 @app.route('/viz/<name>')
+def show_bidirection_viz(name):
+    return render_template('viz.html', name=name)
+
+
+@app.route('/sviz/<name>')
 def show_viz(name):
-    return render_template('graphviz.html', name=name)
+    return render_template('sviz.html', name=name)
 
 
 @app.route('/cluster/entities/<uri>')
@@ -52,7 +58,13 @@ def show_cluster(uri):
     return render_template('cluster.html', cluster=cluster)
 
 
+@app.route('/report')
+def show_report():
+    report = Report()
+    return render_template('report.html', report=report)
+
+
 if __name__ == '__main__':
     # app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     app.debug = True
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5005)

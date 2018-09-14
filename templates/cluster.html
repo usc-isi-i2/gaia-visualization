@@ -12,7 +12,7 @@
         <li>Type: {{ cluster.prototype.type }}</li>
     </ul>
     <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
-    <iframe src="/viz/{{ cluster.img }}" height="70%" width="100%"></iframe>
+    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
     <h2>Members</h2>
     <ol>
     {% for member in cluster.members %}
@@ -22,11 +22,7 @@
                 <li>Type: {{ member.type }}</li>
             {% if member.source %}
                 <li>Source:
-                    {% if member.source_url %}
-                        <a href="{{ member.source_url }}">{{ member.source }}</a>
-                    {% else %}
-                        {{ member.source }}
-                    {% endif %}
+                    {{ member.source }}
                     <ul>
                         {% for mention in member.mention %}
                             <li>{{ mention }}</li>

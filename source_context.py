@@ -1,29 +1,39 @@
-
-import json
-map_path = 'source_map.json'
+from pathlib import Path
+import xml.etree.ElementTree as ET
+source_path = Path('ltf')
 
 
 class SourceContext:
-    def __init__(self):
-        self.map = json.load(open(map_path))
-
-    def get_some_context(self, src, start, end, offset=50):
-        if src not in self.map:
-            return ''
-        return self.__get_context_with_offset(self.map[src]['content'], start, end, offset)
+    def __init__(self, doc_id):
+        self.doc_id = doc_id
+        self.filepath = source_path / (doc_id + '.ltf.xml')
 
     @staticmethod
-    def __get_context_with_offset(content, start, end, offset):
-        from_ = max((0, content.rfind('\n', 0, start+1)+1, start-offset))
-        newline_ind = content.find('\n', end)
-        if newline_ind != -1:
-            to = min((len(content), newline_ind, end+offset))
-        else:
-            to = min(len(content), end+offset)
-        result = content[from_:to].strip().replace('\n', ' ')
-        if from_ == start-offset:
-            result = '...'+result
-        if to == end+offset:
-            result += '...'
-        return result
+    def get_some_context(src, start, end):
+        context_extractor = SourceContext(src)
+        if not context_extractor.filepath.is_file():
+            return ''
+        context_extractor.query_context(start, end)
 
+    def query_context(self, start, end):
+        tree = ET.parse(self.filepath)
+        root = tree.getroot()
+        texts = []
+        for child in root.findall('./DOC/TEXT/SEG'):
+            seg_start, seg_end = int(child.get('start_char')), int(child.get('end_char'))
+            if seg_end < start:
+                continue
+            if seg_start > end:
+                break
+            text = child.find('ORIGINAL_TEXT').text
+            texts.append(text)
+        return ' '.join(texts)
+
+    def doc_exists(self):
+        return self.filepath.is_file()
+
+
+if __name__ == '__main__':
+    sc = SourceContext('IC0014YP8')
+    print(sc.filepath.is_file())
+    print(sc.query_context(59, 75))
