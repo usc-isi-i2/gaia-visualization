@@ -184,11 +184,15 @@ class SuperEdgeBasedGraph(ClusterGraph):
     @staticmethod
     def _cluster_node_from_pickle(uri):
         c = clusters[uri]
-        return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
+        if c['type'] != AIDA.Relation:
+            return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
+        else:
+            return ClusterNode(uri, c['size'], '', type_=c['type'])
 
 
 if __name__ == '__main__':
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/a38267dd-499f-45bd-aa22-7b474781f193-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/entities/4242167c-60ee-4ea5-9efa-105d41ce8306-cluster')
+    # cluster = get_cluster('http://www.isi.edu/gaia/assertions/bdc5d9d1-5167-4d93-b2c1-d0b3e62bf12c-cluster')
     neighborhood = cluster.neighborhood()
     graph = SuperEdgeBasedGraph(neighborhood, cluster, cluster.uri)
     dot_string = graph.dot()

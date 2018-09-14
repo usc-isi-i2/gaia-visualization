@@ -1,16 +1,19 @@
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
 from source_context import SourceContext
 from rdflib import URIRef, Literal
-from rdflib.namespace import Namespace, RDF
+from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple
-endpoint = 'http://gaiadev01.isi.edu:3030/rpi0901aif80d2/query'
+import pickle
+
+endpoint = 'http://gaiadev01.isi.edu:3030/rpi0907/query'
 sparql = SPARQLStore(endpoint)
 AIDA = Namespace('https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#')
 namespaces = {
     'aida': AIDA,
     'rdf': RDF,
+    'skos': SKOS
 }
-
+pickled = pickle.load(open('cluster.pkl', 'rb'))
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
 
 
@@ -35,6 +38,8 @@ class Cluster:
 
     @property
     def label(self):
+        if self.uri in pickled and 'label' in pickled[self.uri]:
+            return pickled[self.uri]['label']
         return self.prototype.label
 
     @property
@@ -45,6 +50,8 @@ class Cluster:
 
     @property
     def type(self):
+        if self.uri in pickled and 'type' in pickled[self.uri]:
+            return pickled[self.uri]['type']
         if not self.__type:
             self._init_cluster_prototype()
         return self.__type
@@ -107,14 +114,16 @@ class Cluster:
 SELECT ?prototype ?label ?type ?category
 WHERE {
   ?cluster aida:prototype ?prototype .
-  ?prototype a ?type ;
-             aida:hasName ?label .
+  ?prototype a ?type .
+  OPTIONAL { ?prototype aida:hasName ?label } .
   ?statement a rdf:Statement ;
              rdf:subject ?prototype ;
              rdf:predicate rdf:type ;
              rdf:object ?category ;
 } """
         for prototype, label, type_, cate in sparql.query(query, namespaces, {'cluster': self.uri}):
+            if not label:
+                _, label = split_uri(cate)
             self.__prototype = ClusterMember(prototype, label, type_)
             self.__type = cate
 
@@ -124,7 +133,7 @@ SELECT ?member ?label ?type
 WHERE {
   ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
-  ?member aida:hasName ?label .
+  OPTIONAL { ?member aida:hasName ?label } .
   ?statement a rdf:Statement ;
              rdf:subject ?member ;
              rdf:predicate rdf:type ;
@@ -162,6 +171,8 @@ WHERE {
             self.__backward.add(SuperEdge(Cluster(s), self, p, int(cnt)))
 
     def _query_for_size(self):
+        if self.uri in pickled and 'size' in pickled[self.uri]:
+            return pickled[self.uri]['size']
         query = """
 SELECT (COUNT(?member) AS ?size)
 WHERE {
@@ -222,12 +233,17 @@ class ClusterMember:
         query = """
 SELECT ?label ?type
 WHERE {
-  ?member aida:hasName ?label .
+  OPTIONAL { ?member aida:hasName ?label } 
+  OPTIONAL { ?member aida:justifiedBy ?justification .
+    ?justification skos:prefLabel ?label }
   ?statement rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
-} """
+}
+LIMIT 1 """
         for label, type_ in sparql.query(query, namespaces, {'member': self.uri}):
+            if not label:
+                _, label = split_uri(type_)
             self.__label = label
             self.__type = type_
 
@@ -272,21 +288,27 @@ def get_cluster_list(type_=None):
 SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
   ?cluster aida:prototype ?prototype .
-  ?prototype a ?type ;
-             aida:hasName ?label .
+  ?prototype a ?type .
+  label_string
   ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
 }
 GROUP BY ?cluster ?label
-ORDER BY DESC(?memberN)
+ORDER BY DESC(?memberN) 
 LIMIT 10 """
-    if type_ in {AIDA.Entity, AIDA.Event}:
+    if type_ == AIDA.Entity:
         query = query.replace('?type', type_.n3())
-    return [ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster'), l, c)
-            for u, l, c in sparql.query(query, namespaces)]
+        query = query.replace('label_string', '?prototype aida:hasName ?label .')
+    if type_ == AIDA.Event:
+        query = query.replace('?type', type_.n3())
+        query = query.replace('label_string', '?s rdf:subject ?prototype ; rdf:predicate rdf:type ; rdf:object ?label .')
+    for u, l, c in sparql.query(query, namespaces):
+        if isinstance(l, URIRef):
+            _, l = split_uri(l)
+        yield ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster'), l, c)
 
 
 if __name__ == '__main__':
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/a38267dd-499f-45bd-aa22-7b474781f193-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/events/21c6471f-e889-40e8-bd00-3d090cf07d0c-cluster')
     print(cluster.label, cluster.uri, cluster.type, cluster.prototype.type)
     print(cluster.size)
