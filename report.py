@@ -1,4 +1,4 @@
-from model import sparql, namespaces
+from model import namespaces, sparql
 import json
 
 
@@ -137,7 +137,7 @@ class Report:
         SELECT (COUNT(?c) AS ?cN)
         WHERE {
           ?c aida:prototype ?p .
-          ?p a ?type .  
+          ?p a ?type .
         } '''.replace('?type', type_)
         return count_query(query)
 
@@ -165,7 +165,7 @@ class Report:
     @property
     def num_of_self_connect_entity(self):
         query = '''
-        PREFIX aida: <https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#> 
+        PREFIX aida: <https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
         SELECT ?relation ?entity

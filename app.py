@@ -1,4 +1,4 @@
-from flask import Flask, render_template, abort
+from flask import Flask, render_template, abort, request
 from model import get_cluster, get_cluster_list, types
 from report import Report
 
@@ -60,7 +60,8 @@ def show_cluster(uri):
 
 @app.route('/report')
 def show_report():
-    report = Report()
+    update = request.args.get('update', default=False, type=bool)
+    report = Report(update)
     return render_template('report.html', report=report)
 
 
