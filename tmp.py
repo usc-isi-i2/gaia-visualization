@@ -18,7 +18,7 @@ for cluster, size in sparql.query(query, namespaces):
 
 # Entity
 query = """
-SELECT ?cluster ?label ?category 
+SELECT ?cluster ?label ?category
 WHERE {
   ?cluster aida:prototype ?prototype .
   ?prototype aida:hasName ?label .
@@ -32,7 +32,7 @@ for cluster, label, type_ in sparql.query(query, namespaces):
 
 # Event
 query = """
-SELECT ?cluster ?category 
+SELECT ?cluster ?category
 WHERE {
   ?cluster aida:prototype ?prototype .
   ?prototype a aida:Event .
