@@ -50,6 +50,11 @@ def show_event_cluster(uri):
     uri = 'http://www.isi.edu/gaia/events/' + uri
     return show_cluster(uri)
 
+@app.route('/cluster/AIDA/<path:uri>')
+def show_columbia_cluster(uri):
+    uri = 'http://www.columbia.edu/AIDA/' + uri
+    return show_cluster(uri)
+
 
 def show_cluster(uri):
     cluster = get_cluster(uri)
