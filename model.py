@@ -4,8 +4,8 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple
 import pickle
+from setting import endpoint
 
-endpoint = 'http://gaiadev01.isi.edu:7200/repositories/0923r0wl'
 sparql = SPARQLStore(endpoint)
 AIDA = Namespace('https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#')
 namespaces = {
@@ -15,7 +15,7 @@ namespaces = {
 }
 try:
   pickled = pickle.load(open('cluster.pkl', 'rb'))
-except FileNotExistsError:
+except FileNotFoundError:
     pickled = {}
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
 

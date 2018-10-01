@@ -1,6 +1,7 @@
 from flask import Flask, render_template, abort, request
 from model import get_cluster, get_cluster_list, types
 from report import Report
+from setting import name
 
 app = Flask(__name__, static_folder='static')
 
@@ -8,6 +9,7 @@ app = Flask(__name__, static_folder='static')
 @app.route('/')
 def hello_world():
     return render_template('index.html',
+                           name=name,
                            entities=get_cluster_list(types.Entity),
                            events=get_cluster_list(types.Events))
 
