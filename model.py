@@ -121,7 +121,7 @@ class Cluster:
 
     def _init_cluster_prototype(self):
         query = """
-SELECT ?prototype ?label ?type ?category
+SELECT ?prototype (MIN(?label) AS ?mlabel) ?type ?category
 WHERE {
     ?cluster aida:prototype ?prototype .
     ?prototype a ?type .
@@ -130,7 +130,8 @@ WHERE {
                rdf:subject ?prototype ;
                rdf:predicate rdf:type ;
                rdf:object ?category ;
-} """
+}
+GROUP BY ?prototype ?type ?category """
         for prototype, label, type_, cate in sparql.query(query, namespaces, {'cluster': self.uri}):
             if not label:
                 _, label = split_uri(cate)
@@ -139,7 +140,7 @@ WHERE {
 
     def _init_cluster_members(self):
         query = """
-SELECT ?member ?label ?type
+SELECT ?member (MIN(?label) AS ?mlabel) ?type
 WHERE {
   ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
@@ -148,7 +149,8 @@ WHERE {
              rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
-} """
+}
+GROUP BY ?member ?type """
         for member, label, type_ in sparql.query(query, namespaces, {'cluster': self.uri}):
             self.__members.append(ClusterMember(member, label, type_))
 
@@ -322,6 +324,6 @@ LIMIT 10 """
 
 
 if __name__ == '__main__':
-    cluster = get_cluster('http://www.columbia.edu/AIDA/DVMM/Entities/ObjectDetection/RUN00004/Keyframe/HC000QHOG_2/7-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/entities/2dd85bb7-fea9-44ab-b3b8-d2272d874a25-cluster')
     print(cluster.label, cluster.uri, cluster.type, cluster.prototype.type)
     print(cluster.size)
