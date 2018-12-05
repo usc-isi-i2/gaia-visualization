@@ -1,6 +1,7 @@
-from flask import Flask, render_template, abort
+from flask import Flask, render_template, abort, request
 from model import get_cluster, get_cluster_list, types
 from report import Report
+from setting import name
 
 app = Flask(__name__, static_folder='static')
 
@@ -8,6 +9,7 @@ app = Flask(__name__, static_folder='static')
 @app.route('/')
 def hello_world():
     return render_template('index.html',
+                           name=name,
                            entities=get_cluster_list(types.Entity),
                            events=get_cluster_list(types.Events))
 
@@ -50,6 +52,11 @@ def show_event_cluster(uri):
     uri = 'http://www.isi.edu/gaia/events/' + uri
     return show_cluster(uri)
 
+@app.route('/cluster/AIDA/<path:uri>')
+def show_columbia_cluster(uri):
+    uri = 'http://www.columbia.edu/AIDA/' + uri
+    return show_cluster(uri)
+
 
 def show_cluster(uri):
     cluster = get_cluster(uri)
@@ -60,7 +67,8 @@ def show_cluster(uri):
 
 @app.route('/report')
 def show_report():
-    report = Report()
+    update = request.args.get('update', default=False, type=bool)
+    report = Report(update)
     return render_template('report.html', report=report)
 
 
