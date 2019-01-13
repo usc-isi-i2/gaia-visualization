@@ -12,12 +12,14 @@
         {% for cluster in entities %}
             <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
         {% endfor %}
+        <a href="/list/entity">Show more...</a>
     {% endif %}
     {% if events %}
     <h2>Events</h2>
         {% for cluster in events %}
             <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
         {% endfor %}
+        <a href="/list/event">Show more...</a>
     {% endif %}
 {% endif %}
 </body>

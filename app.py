@@ -45,6 +45,24 @@ def show_entity_cluster(uri):
     uri = 'http://www.isi.edu/gaia/entities/' + uri
     return show_cluster(uri)
 
+@app.route('/list/<type_>')
+def show_entity_cluster_list(type_):
+    limit = request.args.get('limit', default=100, type=int)
+    offset = request.args.get('offset', default=0, type=int)
+    if type_ == 'entity':
+        return render_template('list.html',
+                               type_='entity',
+                               limit=limit,
+                               offset=offset,
+                               clusters=get_cluster_list(types.Entity, limit, offset))
+    elif type_ == 'event':
+        return render_template('list.html',
+                               type_='event',
+                               limit=limit,
+                               offset=offset,
+                               clusters=get_cluster_list(types.Events, limit, offset))
+    else:
+        abort(404)
 
 @app.route('/cluster/events/<uri>')
 @app.route('/events/<uri>')

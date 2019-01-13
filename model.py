@@ -297,7 +297,7 @@ ORDER BY ?start """
 ClusterSummary = namedtuple('ClusterSummary', ['uri', 'href', 'label', 'count'])
 
 
-def get_cluster_list(type_=None):
+def get_cluster_list(type_=None, limit=10, offset=0):
     query = """
 SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
@@ -309,13 +309,17 @@ WHERE {
 }
 GROUP BY ?cluster ?label
 ORDER BY DESC(?memberN)
-LIMIT 10 """
+"""
     if type_ == AIDA.Entity:
         query = query.replace('?type', type_.n3())
         query = query.replace('label_string', '?prototype aida:hasName ?label .')
     if type_ == AIDA.Event:
         query = query.replace('?type', type_.n3())
         query = query.replace('label_string', '?s rdf:subject ?prototype ; rdf:predicate rdf:type ; rdf:object ?label .')
+    if limit:
+        query += " LIMIT " + str(limit)
+    if offset:
+        query += " OFFSET " + str(offset)
     for u, l, c in sparql.query(query, namespaces):
         if isinstance(l, URIRef):
             _, l = split_uri(l)
