@@ -224,6 +224,7 @@ class ClusterMember:
         self.__source = None
         self.__context_pos = []
         self.__context_extractor = None
+        self.__cluster: Cluster = None
 
     @property
     def label(self):
@@ -238,10 +239,46 @@ class ClusterMember:
         return self.__type
 
     @property
+    def type_text(self):
+        _, text = split_uri(self.type)
+        return text
+
+    @property
     def context_extractor(self):
         if self.__context_extractor is None:
             self.__context_extractor = SourceContext(self.source)
         return self.__context_extractor
+
+    @property
+    def roles(self):
+        query = """
+        SELECT ?pred ?obj ?objtype (MIN(?objlbl) AS ?objlabel)
+        WHERE {
+            ?statement rdf:subject ?event ;
+                       rdf:predicate ?pred ;
+                       rdf:object ?obj .
+            ?objstate rdf:subject ?obj ;
+                      rdf:predicate rdf:type ;
+                      rdf:object ?objtype .
+            OPTIONAL { ?obj aida:hasName ?objlbl }
+        }
+        GROUP BY ?pred ?obj ?objtype
+        """
+        for pred, obj, obj_type, obj_lbl in sparql.query(query, namespaces, {'event': self.uri}):
+            if not obj_lbl:
+                _, obj_lbl = split_uri(obj_type)
+            # _, pred = split_uri(pred)
+            ind = pred.find('_')
+            pred = pred[ind+1:]
+            yield pred, ClusterMember(obj, obj_lbl, obj_type)
+
+    @property
+    def cluster(self):
+        if self.__cluster is None:
+            query = "SELECT ?cluster WHERE { ?membership aida:cluster ?cluster ; aida:clusterMember ?member . }"
+            for cluster, in sparql.query(query, namespaces, {'member': self.uri}):
+                self.__cluster = get_cluster(cluster)
+        return self.__cluster
 
     def _init_member(self):
         query = """
@@ -328,6 +365,9 @@ ORDER BY DESC(?memberN)
 
 
 if __name__ == '__main__':
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/2dd85bb7-fea9-44ab-b3b8-d2272d874a25-cluster')
+    # cluster = get_cluster('http://www.isi.edu/gaia/entities/2dd85bb7-fea9-44ab-b3b8-d2272d874a25-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/entities/5c5da320-3a64-4144-9c03-d6533b898050-cluster')
     print(cluster.label, cluster.uri, cluster.type, cluster.prototype.type)
     print(cluster.size)
+    for member in cluster.members:
+        print(member.label, member.type, member.source, member.uri)

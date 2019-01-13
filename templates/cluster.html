@@ -20,6 +20,18 @@
             <ul>
                 <li>Label: {{ member.label }}</li>
                 <li>Type: {{ member.type }}</li>
+            {% if "Event" in cluster.prototype.type %}
+                <li>Roles:
+                    <ul>
+                        {% for pred, obj in member.roles %}
+                            <li><b>{{ pred }}</b>:
+                                {{ obj.label }}
+                                ({{ obj.type_text }} in cluster
+                                <a href="{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endif %}
             {% if member.source %}
                 <li>Source:
                     {{ member.source }}
