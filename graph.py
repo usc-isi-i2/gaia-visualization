@@ -146,6 +146,7 @@ class ClusterEdge(Edge):
             ind = pred.find('_')
             pred = pred[ind+1:]
             # _, pred = split_uri(pred)
+        self.pred = pred
         self.config['label'] = self.edge_label_justify(pred, count)
         # self.config['label'] = pred
         self.set_color('#d62728')
@@ -154,6 +155,12 @@ class ClusterEdge(Edge):
     def edge_label_justify(self, label, count, max_width=20):
         words = label + " (×{})".format(count)
         return "\\n".join(self.text_justify(words, max_width))
+
+    def __hash__(self):
+        return hash((self.id, self.pred))
+
+    def __eq__(self, other):
+        return isinstance(other, ClusterEdge) and self.id == other.id and self.pred == other.pred
 
 
 class ClusterGraph(Graph):

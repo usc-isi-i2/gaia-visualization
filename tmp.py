@@ -14,21 +14,24 @@ WHERE {
 }
 GROUP BY ?cluster """
 for cluster, size in sparql.query(query, namespaces):
-    data[cluster]['size'] = size
+    data[cluster]['size'] = int(size)
 
 # Entity
 query = """
 SELECT ?cluster ?label ?category
 WHERE {
   ?cluster aida:prototype ?prototype .
-  ?prototype aida:hasName ?label .
+  ?prototype a aida:Entity .
+  OPTIONAL { ?prototype aida:hasName ?label }
   ?statement rdf:subject ?prototype ;
              rdf:predicate rdf:type ;
              rdf:object ?category .
 } """
 for cluster, label, type_ in sparql.query(query, namespaces):
-    data[cluster]['label'] = label
-    data[cluster]['type'] = type_
+    if not label:
+        _, label = split_uri(type_)
+    data[cluster]['label'] = str(label)
+    data[cluster]['type'] = str(type_)
 
 # Event
 query = """
@@ -42,8 +45,8 @@ WHERE {
 } """
 for cluster, type_ in sparql.query(query, namespaces):
     _, label = split_uri(type_)
-    data[cluster]['label'] = label
-    data[cluster]['type'] = type_
+    data[cluster]['label'] = str(label)
+    data[cluster]['type'] = str(type_)
 
 # Relation
 query = """
@@ -57,7 +60,7 @@ WHERE {
 } """
 for cluster, type_ in sparql.query(query, namespaces):
     _, label = split_uri(type_)
-    data[cluster]['label'] = label
-    data[cluster]['type'] = AIDA.Relation
+    data[cluster]['label'] = str(label)
+    data[cluster]['type'] = str(AIDA.Relation)
 
 pickle.dump(data, open('cluster.pkl', 'wb'))

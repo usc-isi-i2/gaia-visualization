@@ -200,6 +200,9 @@ WHERE {
     def __hash__(self):
         return self.uri.__hash__()
 
+    def __eq__(self, other):
+        return isinstance(other, Cluster) and str(self.uri) == str(other.uri)
+
 
 class SuperEdge:
     def __init__(self, s: Cluster, o: Cluster, p: URIRef, n: int):
@@ -212,8 +215,8 @@ class SuperEdge:
         return hash((self.subject.uri, self.predicate, self.object.uri))
 
     def __eq__(self, other):
-        return isinstance(other, SuperEdge) and str(self.subject) == str(other.subject) and str(self.predicate) == str(
-            other.predicate) and str(self.object) == str(other.object)
+        return isinstance(other, SuperEdge) and str(self.subject.uri) == str(other.subject.uri) and str(
+            self.predicate) == str(other.predicate) and str(self.object.uri) == str(other.object.uri)
 
 
 class ClusterMember:
