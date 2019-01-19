@@ -8,14 +8,19 @@
     <h1>{{ cluster.label }} ( {{ cluster.type }} )</h1>
     <ul>
         <li>URI: {{ cluster.uri }}</li>
+        <li>Size: {{ cluster.size }}</li>
         <li>Label: {{ cluster.label }}</li>
         <li>Type: {{ cluster.prototype.type }}</li>
     </ul>
+    {% if show_image %}
     <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
     <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
+    {% endif %}
     <h2>Members</h2>
     <ol>
+    {# Only show limit numbers with a show all button #}
     {% for member in cluster.members %}
+        {% if not show_limit or loop.index <= show_limit %}
             <li>{{ member.uri }}</li>
             <ul>
                 <li>Label: {{ member.label }}</li>
@@ -43,7 +48,11 @@
                 </li>
             {% endif %}
             </ul>
+        {% endif %}
     {% endfor %}
+    {% if show_limit and cluster.size > show_limit %}
+        <a href="{{ cluster.href }}?image=false&limit=false">Show all members</a>
+    {% endif %}
     </ol>
 </body>
 </html>

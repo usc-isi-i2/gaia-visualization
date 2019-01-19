@@ -14,7 +14,7 @@ namespaces = {
     'skos': SKOS
 }
 try:
-  pickled = pickle.load(open('cluster.pkl', 'rb'))
+  pickled = pickle.load(open('cluster_lbl.pkl', 'rb'))
 except FileNotFoundError:
     pickled = {}
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
@@ -107,6 +107,12 @@ class Cluster:
 
     @property
     def img(self):
+        import os.path
+        _, name = split_uri(self.uri)
+        svgpath = 'static/img/' + name + '.svg'
+        if os.path.isfile(svgpath):
+            return name
+
         from graph import SuperEdgeBasedGraph
         graph = SuperEdgeBasedGraph(self.neighborhood(), self, self.uri)
         path = graph.dot()

@@ -43,7 +43,9 @@ def show_viz(name):
 @app.route('/entities/<uri>')
 def show_entity_cluster(uri):
     uri = 'http://www.isi.edu/gaia/entities/' + uri
-    return show_cluster(uri)
+    show_image = request.args.get('image', default=True)
+    show_limit = request.args.get('limit', default=100)
+    return show_cluster(uri, show_image, show_limit)
 
 @app.route('/list/<type_>')
 def show_entity_cluster_list(type_):
@@ -68,19 +70,26 @@ def show_entity_cluster_list(type_):
 @app.route('/events/<uri>')
 def show_event_cluster(uri):
     uri = 'http://www.isi.edu/gaia/events/' + uri
-    return show_cluster(uri)
+    show_image = request.args.get('image', default=True)
+    show_limit = request.args.get('limit', default=100)
+    return show_cluster(uri, show_image, show_limit)
 
 @app.route('/cluster/AIDA/<path:uri>')
 def show_columbia_cluster(uri):
     uri = 'http://www.columbia.edu/AIDA/' + uri
-    return show_cluster(uri)
+    show_image = request.args.get('image', default=True)
+    show_limit = request.args.get('limit', default=100)
+    return show_cluster(uri, show_image, show_limit)
 
 
-def show_cluster(uri):
+def show_cluster(uri, show_image=True, show_limit=100):
     cluster = get_cluster(uri)
+    show_image = show_image not in {False, 'False', 'false', 'no', '0'}
+    show_limit = show_limit not in {False, 'False', 'false', 'no', '0'} and (
+                isinstance(show_limit, int) and show_limit) or (show_limit.isdigit() and int(show_limit))
     if not cluster:
         abort(404)
-    return render_template('cluster.html', cluster=cluster)
+    return render_template('cluster.html', cluster=cluster, show_image=show_image, show_limit=show_limit)
 
 
 @app.route('/report')
