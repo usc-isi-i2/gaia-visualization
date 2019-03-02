@@ -190,11 +190,16 @@ class SuperEdgeBasedGraph(ClusterGraph):
 
     @staticmethod
     def _cluster_node_from_pickle(uri):
-        c = clusters[uri]
-        if c['type'] != AIDA.Relation:
-            return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
-        else:
-            return ClusterNode(uri, c['size'], '', type_=c['type'])
+        try:
+            c = clusters[str(uri)]
+            if c['type'] != AIDA.Relation:
+                return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
+            else:
+                return ClusterNode(uri, c['size'], '', type_=c['type'])
+        except KeyError:
+            print("Failed to hit the cluster cache with uri: ", uri)
+            return SuperEdgeBasedGraph._cluster_node_from_cluster(get_cluster(uri))
+
 
 
 if __name__ == '__main__':

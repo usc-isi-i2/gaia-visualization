@@ -14,6 +14,7 @@ WHERE {
 }
 GROUP BY ?cluster """
 for cluster, size in sparql.query(query, namespaces):
+    cluster = str(cluster)
     data[cluster]['size'] = int(size)
 
 # Entity
@@ -30,6 +31,7 @@ WHERE {
 for cluster, label, type_ in sparql.query(query, namespaces):
     if not label:
         _, label = split_uri(type_)
+    cluster = str(cluster)
     data[cluster]['label'] = str(label)
     data[cluster]['type'] = str(type_)
 
@@ -45,6 +47,7 @@ WHERE {
 } """
 for cluster, type_ in sparql.query(query, namespaces):
     _, label = split_uri(type_)
+    cluster = str(cluster)
     data[cluster]['label'] = str(label)
     data[cluster]['type'] = str(type_)
 
@@ -60,6 +63,7 @@ WHERE {
 } """
 for cluster, type_ in sparql.query(query, namespaces):
     _, label = split_uri(type_)
+    cluster = str(cluster)
     data[cluster]['label'] = str(label)
     data[cluster]['type'] = str(AIDA.Relation)
 
