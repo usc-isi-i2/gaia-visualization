@@ -14,7 +14,7 @@ namespaces = {
     'skos': SKOS
 }
 try:
-  pickled = pickle.load(open('cluster.pkl', 'rb'))
+  pickled = pickle.load(open('cluster_lbl.pkl', 'rb'))
 except FileNotFoundError:
     pickled = {}
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
@@ -24,6 +24,32 @@ def get_cluster(uri):
     if Cluster.ask(uri):
         return Cluster(uri)
     return None
+
+
+def recover_doc_online(doc_id):
+    import json
+    query_label_location = """
+    SELECT DISTINCT ?label ?start ?end ?justificationType WHERE {
+        ?justification a aida:TextJustification ;
+                       skos:prefLabel ?label ;
+                       aida:source ?source ;
+                       aida:startOffset ?start ;
+                       aida:endOffsetInclusive ?end ;
+                       aida:privateData ?privateData .
+        ?privateData aida:system <http://www.rpi.edu> ; aida:jsonContent ?justificationType
+    }
+    ORDER BY ?start
+    """
+    doc_recover = ''
+    lend = 0
+    for label, start, end, j in sparql.query(query_label_location, namespaces, {'source': Literal(doc_id)}):
+        doc_recover += ' ' * (int(start)-lend)
+        if json.loads(j).get('justificationType') == 'pronominal_mention':
+            doc_recover += '<span style="color: red"><b>' + label + '</b></span>'
+        else:
+            doc_recover += '<u>' + label + '</u>'
+        lend = int(end)
+    return doc_recover
 
 
 class Cluster:
@@ -107,6 +133,12 @@ class Cluster:
 
     @property
     def img(self):
+        import os.path
+        _, name = split_uri(self.uri)
+        svgpath = 'static/img/' + name + '.svg'
+        if os.path.isfile(svgpath):
+            return name
+
         from graph import SuperEdgeBasedGraph
         graph = SuperEdgeBasedGraph(self.neighborhood(), self, self.uri)
         path = graph.dot()
@@ -200,6 +232,9 @@ WHERE {
     def __hash__(self):
         return self.uri.__hash__()
 
+    def __eq__(self, other):
+        return isinstance(other, Cluster) and str(self.uri) == str(other.uri)
+
 
 class SuperEdge:
     def __init__(self, s: Cluster, o: Cluster, p: URIRef, n: int):
@@ -212,8 +247,8 @@ class SuperEdge:
         return hash((self.subject.uri, self.predicate, self.object.uri))
 
     def __eq__(self, other):
-        return isinstance(other, SuperEdge) and str(self.subject) == str(other.subject) and str(self.predicate) == str(
-            other.predicate) and str(self.object) == str(other.object)
+        return isinstance(other, SuperEdge) and str(self.subject.uri) == str(other.subject.uri) and str(
+            self.predicate) == str(other.predicate) and str(self.object.uri) == str(other.object.uri)
 
 
 class ClusterMember:
@@ -224,6 +259,7 @@ class ClusterMember:
         self.__source = None
         self.__context_pos = []
         self.__context_extractor = None
+        self.__cluster: Cluster = None
 
     @property
     def label(self):
@@ -238,10 +274,46 @@ class ClusterMember:
         return self.__type
 
     @property
+    def type_text(self):
+        _, text = split_uri(self.type)
+        return text
+
+    @property
     def context_extractor(self):
         if self.__context_extractor is None:
             self.__context_extractor = SourceContext(self.source)
         return self.__context_extractor
+
+    @property
+    def roles(self):
+        query = """
+        SELECT ?pred ?obj ?objtype (MIN(?objlbl) AS ?objlabel)
+        WHERE {
+            ?statement rdf:subject ?event ;
+                       rdf:predicate ?pred ;
+                       rdf:object ?obj .
+            ?objstate rdf:subject ?obj ;
+                      rdf:predicate rdf:type ;
+                      rdf:object ?objtype .
+            OPTIONAL { ?obj aida:hasName ?objlbl }
+        }
+        GROUP BY ?pred ?obj ?objtype
+        """
+        for pred, obj, obj_type, obj_lbl in sparql.query(query, namespaces, {'event': self.uri}):
+            if not obj_lbl:
+                _, obj_lbl = split_uri(obj_type)
+            # _, pred = split_uri(pred)
+            ind = pred.find('_')
+            pred = pred[ind+1:]
+            yield pred, ClusterMember(obj, obj_lbl, obj_type)
+
+    @property
+    def cluster(self):
+        if self.__cluster is None:
+            query = "SELECT ?cluster WHERE { ?membership aida:cluster ?cluster ; aida:clusterMember ?member . }"
+            for cluster, in sparql.query(query, namespaces, {'member': self.uri}):
+                self.__cluster = get_cluster(cluster)
+        return self.__cluster
 
     def _init_member(self):
         query = """
@@ -297,7 +369,7 @@ ORDER BY ?start """
 ClusterSummary = namedtuple('ClusterSummary', ['uri', 'href', 'label', 'count'])
 
 
-def get_cluster_list(type_=None):
+def get_cluster_list(type_=None, limit=10, offset=0):
     query = """
 SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
@@ -309,13 +381,17 @@ WHERE {
 }
 GROUP BY ?cluster ?label
 ORDER BY DESC(?memberN)
-LIMIT 10 """
+"""
     if type_ == AIDA.Entity:
         query = query.replace('?type', type_.n3())
         query = query.replace('label_string', '?prototype aida:hasName ?label .')
     if type_ == AIDA.Event:
         query = query.replace('?type', type_.n3())
         query = query.replace('label_string', '?s rdf:subject ?prototype ; rdf:predicate rdf:type ; rdf:object ?label .')
+    if limit:
+        query += " LIMIT " + str(limit)
+    if offset:
+        query += " OFFSET " + str(offset)
     for u, l, c in sparql.query(query, namespaces):
         if isinstance(l, URIRef):
             _, l = split_uri(l)
@@ -324,6 +400,9 @@ LIMIT 10 """
 
 
 if __name__ == '__main__':
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/2dd85bb7-fea9-44ab-b3b8-d2272d874a25-cluster')
+    # cluster = get_cluster('http://www.isi.edu/gaia/entities/2dd85bb7-fea9-44ab-b3b8-d2272d874a25-cluster')
+    cluster = get_cluster('http://www.isi.edu/gaia/entities/5c5da320-3a64-4144-9c03-d6533b898050-cluster')
     print(cluster.label, cluster.uri, cluster.type, cluster.prototype.type)
     print(cluster.size)
+    for member in cluster.members:
+        print(member.label, member.type, member.source, member.uri)

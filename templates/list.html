@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>List for {% if type_ == "entity" %} entities {% else %} events {% endif %}</title>
+</head>
+<body>
+<h1>{% if type_ == "entity" %} Entity list {% else %} Event list {% endif %}</h1>
+    {% for cluster in clusters %}
+        <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+    {% endfor %}
+{% if offset > limit %}
+    <a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset-limit }}">Prev page</a>
+{% elif offset > 0 %}
+    <a href="/list/{{ type_ }}?limit={{ limit }}">Prev page</a>
+{% endif %}
+<a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset+limit }}">Next page</a>
+</body>
+</html>

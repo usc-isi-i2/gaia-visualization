@@ -7,7 +7,7 @@ import pickle
 
 SVG = 'SVG'
 PNG = 'PNG'
-clusters = pickle.load(open('cluster.pkl', 'rb'))
+clusters = pickle.load(open('cluster_lbl.pkl', 'rb'))
 
 
 class Graph:
@@ -146,6 +146,7 @@ class ClusterEdge(Edge):
             ind = pred.find('_')
             pred = pred[ind+1:]
             # _, pred = split_uri(pred)
+        self.pred = pred
         self.config['label'] = self.edge_label_justify(pred, count)
         # self.config['label'] = pred
         self.set_color('#d62728')
@@ -154,6 +155,12 @@ class ClusterEdge(Edge):
     def edge_label_justify(self, label, count, max_width=20):
         words = label + " (×{})".format(count)
         return "\\n".join(self.text_justify(words, max_width))
+
+    def __hash__(self):
+        return hash((self.id, self.pred))
+
+    def __eq__(self, other):
+        return isinstance(other, ClusterEdge) and self.id == other.id and self.pred == other.pred
 
 
 class ClusterGraph(Graph):
@@ -183,11 +190,16 @@ class SuperEdgeBasedGraph(ClusterGraph):
 
     @staticmethod
     def _cluster_node_from_pickle(uri):
-        c = clusters[uri]
-        if c['type'] != AIDA.Relation:
-            return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
-        else:
-            return ClusterNode(uri, c['size'], '', type_=c['type'])
+        try:
+            c = clusters[str(uri)]
+            if c['type'] != AIDA.Relation:
+                return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
+            else:
+                return ClusterNode(uri, c['size'], '', type_=c['type'])
+        except KeyError:
+            print("Failed to hit the cluster cache with uri: ", uri)
+            return SuperEdgeBasedGraph._cluster_node_from_cluster(get_cluster(uri))
+
 
 
 if __name__ == '__main__':
