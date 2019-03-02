@@ -26,6 +26,32 @@ def get_cluster(uri):
     return None
 
 
+def recover_doc_online(doc_id):
+    import json
+    query_label_location = """
+    SELECT DISTINCT ?label ?start ?end ?justificationType WHERE {
+        ?justification a aida:TextJustification ;
+                       skos:prefLabel ?label ;
+                       aida:source ?source ;
+                       aida:startOffset ?start ;
+                       aida:endOffsetInclusive ?end ;
+                       aida:privateData ?privateData .
+        ?privateData aida:system <http://www.rpi.edu> ; aida:jsonContent ?justificationType
+    }
+    ORDER BY ?start
+    """
+    doc_recover = ''
+    lend = 0
+    for label, start, end, j in sparql.query(query_label_location, namespaces, {'source': Literal(doc_id)}):
+        doc_recover += ' ' * (int(start)-lend)
+        if json.loads(j).get('justificationType') == 'pronominal_mention':
+            doc_recover += '<span style="color: red"><b>' + label + '</b></span>'
+        else:
+            doc_recover += '<u>' + label + '</u>'
+        lend = int(end)
+    return doc_recover
+
+
 class Cluster:
     def __init__(self, uri):
         self.uri = URIRef(uri)

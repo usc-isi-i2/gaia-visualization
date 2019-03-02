@@ -1,5 +1,5 @@
 from flask import Flask, render_template, abort, request
-from model import get_cluster, get_cluster_list, types
+from model import get_cluster, get_cluster_list, types, recover_doc_online
 from report import Report
 from setting import name
 
@@ -97,6 +97,11 @@ def show_report():
     update = request.args.get('update', default=False, type=bool)
     report = Report(update)
     return render_template('report.html', report=report)
+
+
+@app.route('/doc/<doc_id>')
+def show_doc_pronoun(doc_id):
+    return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
 
 
 if __name__ == '__main__':
