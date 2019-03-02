@@ -1,8 +1,9 @@
 #+TITLE: GAIA Visualization
 
 * Introduction
+This repo is used to visualize AIDA TA2 clustering results.
 
-* Dev requirement
-
+* Requirement
 - rdflib
-
+- flask
+- In order to plot cluster you also need [[https://www.graphviz.org/][Graphviv]].
