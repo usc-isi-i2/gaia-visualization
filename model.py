@@ -60,6 +60,7 @@ class Cluster:
         self.__members = []
         self.__forward = None
         self.__backward = None
+        self.__targets = []
 
     @property
     def href(self):
@@ -90,6 +91,18 @@ class Cluster:
         if not self.__members:
             self._init_cluster_members()
         return self.__members
+
+    @property
+    def targets(self):
+        if not self.__targets:
+            self._init_cluster_members()
+        return self.__targets;
+
+    @property
+    def targetsSize(self):
+        return len(self.targets)
+
+
 
     @property
     def size(self):
@@ -172,19 +185,21 @@ GROUP BY ?prototype ?type ?category """
 
     def _init_cluster_members(self):
         query = """
-SELECT ?member (MIN(?label) AS ?mlabel) ?type
+SELECT ?member (MIN(?label) AS ?mlabel) ?type ?target
 WHERE {
   ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
   OPTIONAL { ?member aida:hasName ?label } .
+  OPTIONAL { ?member aida:link/aida:linkTarget ?target } .
   ?statement a rdf:Statement ;
              rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
 }
-GROUP BY ?member ?type """
-        for member, label, type_ in sparql.query(query, namespaces, {'cluster': self.uri}):
-            self.__members.append(ClusterMember(member, label, type_))
+GROUP BY ?member ?type ?target """
+        for member, label, type_, target in sparql.query(query, namespaces, {'cluster': self.uri}):
+            self.__members.append(ClusterMember(member, label, type_, target))
+            self.__targets.append(target);
 
     def _init_forward_clusters(self):
         query = """
@@ -252,10 +267,11 @@ class SuperEdge:
 
 
 class ClusterMember:
-    def __init__(self, uri, label=None, type_=None):
+    def __init__(self, uri, label=None, type_=None, target=None):
         self.uri = URIRef(uri)
         self.__label = label
         self.__type = type_
+        self.__target = target
         self.__source = None
         self.__context_pos = []
         self.__context_extractor = None
@@ -277,6 +293,12 @@ class ClusterMember:
     def type_text(self):
         _, text = split_uri(self.type)
         return text
+
+    @property
+    def target(self):
+        if not self.__target:
+            self._init_member()
+        return self.__target
 
     @property
     def context_extractor(self):
@@ -317,11 +339,12 @@ class ClusterMember:
 
     def _init_member(self):
         query = """
-SELECT ?label ?type
+SELECT ?label ?type ?target
 WHERE {
   OPTIONAL { ?member aida:hasName ?label }
   OPTIONAL { ?member aida:justifiedBy ?justification .
     ?justification skos:prefLabel ?label }
+  OPTIONAL { ?obj aida:link/aida:linkTarget ?target }
   ?statement rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
