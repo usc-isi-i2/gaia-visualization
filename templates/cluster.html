@@ -33,6 +33,7 @@
             <li>{{ member.uri }}</li>
             <ul>
                 <li>Label: {{ member.label }}</li>
+                <li>Other Strings: {{ member.allLabels }}</li>
                 <li>Type: {{ member.type }}</li>
             {% if "Event" in cluster.prototype.type %}
                 <li>Roles:

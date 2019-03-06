@@ -276,6 +276,7 @@ class ClusterMember:
     def __init__(self, uri, label=None, type_=None, target=None):
         self.uri = URIRef(uri)
         self.__label = label
+        self.__allLabels = None
         self.__type = type_
         self.__target = target
         self.__qid = None
@@ -291,6 +292,25 @@ class ClusterMember:
         if not self.__label:
             self._init_member()
         return self.__label
+
+    @property
+    def allLabels(self):
+        if not self.__allLabels:
+            self.__allLabels = ""
+            query = """
+                SELECT ?member ?label
+                WHERE {
+                  ?member aida:justifiedBy ?justification .
+                  ?justification skos:prefLabel ?label .
+                }
+            """
+            labels = []
+            for item, label in sparql.query(query, namespaces, {'member': self.uri}):
+                labels.append(str(label))
+            if len(labels) > 0:
+                self.__allLabels = ", ".join(labels)
+
+        return self.__allLabels
 
     @property
     def type(self):
