@@ -7,7 +7,7 @@ import pickle
 
 SVG = 'SVG'
 PNG = 'PNG'
-clusters = pickle.load(open('cluster_lbl.pkl', 'rb'))
+clusters = pickle.load(open('cluster.pkl', 'rb'))
 
 
 class Graph:

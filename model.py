@@ -2,7 +2,7 @@ from rdflib.plugins.stores.sparqlstore import SPARQLStore
 from source_context import SourceContext
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
-from collections import namedtuple
+from collections import namedtuple, Counter
 import pickle
 from setting import endpoint
 
@@ -14,7 +14,7 @@ namespaces = {
     'skos': SKOS
 }
 try:
-  pickled = pickle.load(open('cluster_lbl.pkl', 'rb'))
+  pickled = pickle.load(open('cluster.pkl', 'rb'))
 except FileNotFoundError:
     pickled = {}
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
@@ -60,6 +60,7 @@ class Cluster:
         self.__members = []
         self.__forward = None
         self.__backward = None
+        self.__targets = Counter()
 
     @property
     def href(self):
@@ -90,6 +91,18 @@ class Cluster:
         if not self.__members:
             self._init_cluster_members()
         return self.__members
+
+    @property
+    def targets(self):
+        if not self.__targets:
+            self._init_cluster_members()
+        return self.__targets.most_common()
+
+    @property
+    def targetsSize(self):
+        return len(self.targets)
+
+
 
     @property
     def size(self):
@@ -172,19 +185,22 @@ GROUP BY ?prototype ?type ?category """
 
     def _init_cluster_members(self):
         query = """
-SELECT ?member (MIN(?label) AS ?mlabel) ?type
+SELECT ?member (MIN(?label) AS ?mlabel) ?type ?target
 WHERE {
   ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
   OPTIONAL { ?member aida:hasName ?label } .
+  OPTIONAL { ?member aida:link/aida:linkTarget ?target } .
   ?statement a rdf:Statement ;
              rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
 }
-GROUP BY ?member ?type """
-        for member, label, type_ in sparql.query(query, namespaces, {'cluster': self.uri}):
-            self.__members.append(ClusterMember(member, label, type_))
+GROUP BY ?member ?type ?target """
+        for member, label, type_, target in sparql.query(query, namespaces, {'cluster': self.uri}):
+            self.__members.append(ClusterMember(member, label, type_, target))
+            if target:
+                self.__targets[str(target)] += 1
 
     def _init_forward_clusters(self):
         query = """
@@ -252,10 +268,11 @@ class SuperEdge:
 
 
 class ClusterMember:
-    def __init__(self, uri, label=None, type_=None):
+    def __init__(self, uri, label=None, type_=None, target=None):
         self.uri = URIRef(uri)
         self.__label = label
         self.__type = type_
+        self.__target = target
         self.__source = None
         self.__context_pos = []
         self.__context_extractor = None
@@ -277,6 +294,12 @@ class ClusterMember:
     def type_text(self):
         _, text = split_uri(self.type)
         return text
+
+    @property
+    def target(self):
+        if self.__target is None:
+            self._init_member()
+        return self.__target
 
     @property
     def context_extractor(self):
@@ -317,21 +340,23 @@ class ClusterMember:
 
     def _init_member(self):
         query = """
-SELECT ?label ?type
+SELECT ?label ?type ?target
 WHERE {
   OPTIONAL { ?member aida:hasName ?label }
   OPTIONAL { ?member aida:justifiedBy ?justification .
     ?justification skos:prefLabel ?label }
+  OPTIONAL { ?obj aida:link/aida:linkTarget ?target }
   ?statement rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
 }
 LIMIT 1 """
-        for label, type_ in sparql.query(query, namespaces, {'member': self.uri}):
+        for label, type_, target in sparql.query(query, namespaces, {'member': self.uri}):
             if not label:
                 _, label = split_uri(type_)
             self.__label = label
             self.__type = type_
+            self.__target = target if target else False
 
     def _init_source(self):
         query = """
