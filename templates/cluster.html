@@ -13,10 +13,8 @@
         <li>Type: {{ cluster.prototype.type }}</li>
         <li>Targets:</li>
         <ul>
-        {% for target in cluster.targets %}
-          {% if not target_limit or loop.index <= target_limit %}
-        <li>{{ target }}</li>
-          {% endif %}
+        {% for target, count in cluster.targets %}
+          <li>{{ target }}: {{ count }}x</li>
         {% endfor %}
         </ul>
         {% if target_limit and cluster.targetsSize > target_limit %}

@@ -37,5 +37,5 @@ query_justification_label_for_cluster_by_type('Organization', '[O]')
 query_justification_label_for_cluster_by_type('Vehicle', '[V]')
 
 
-pickle.dump(pickled, open('cluster_lbl.pkl', 'wb'))
+pickle.dump(pickled, open('cluster.pkl', 'wb'))
 

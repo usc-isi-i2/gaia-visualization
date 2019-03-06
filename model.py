@@ -2,7 +2,7 @@ from rdflib.plugins.stores.sparqlstore import SPARQLStore
 from source_context import SourceContext
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
-from collections import namedtuple
+from collections import namedtuple, Counter
 import pickle
 from setting import endpoint
 
@@ -14,7 +14,7 @@ namespaces = {
     'skos': SKOS
 }
 try:
-  pickled = pickle.load(open('cluster_lbl.pkl', 'rb'))
+  pickled = pickle.load(open('cluster.pkl', 'rb'))
 except FileNotFoundError:
     pickled = {}
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
@@ -60,7 +60,7 @@ class Cluster:
         self.__members = []
         self.__forward = None
         self.__backward = None
-        self.__targets = []
+        self.__targets = Counter()
 
     @property
     def href(self):
@@ -96,7 +96,7 @@ class Cluster:
     def targets(self):
         if not self.__targets:
             self._init_cluster_members()
-        return self.__targets;
+        return self.__targets.most_common()
 
     @property
     def targetsSize(self):
@@ -199,7 +199,8 @@ WHERE {
 GROUP BY ?member ?type ?target """
         for member, label, type_, target in sparql.query(query, namespaces, {'cluster': self.uri}):
             self.__members.append(ClusterMember(member, label, type_, target))
-            self.__targets.append(target);
+            if target:
+                self.__targets[str(target)] += 1
 
     def _init_forward_clusters(self):
         query = """
@@ -296,7 +297,7 @@ class ClusterMember:
 
     @property
     def target(self):
-        if not self.__target:
+        if self.__target is None:
             self._init_member()
         return self.__target
 
@@ -350,11 +351,12 @@ WHERE {
              rdf:object ?type .
 }
 LIMIT 1 """
-        for label, type_ in sparql.query(query, namespaces, {'member': self.uri}):
+        for label, type_, target in sparql.query(query, namespaces, {'member': self.uri}):
             if not label:
                 _, label = split_uri(type_)
             self.__label = label
             self.__type = type_
+            self.__target = target if target else False
 
     def _init_source(self):
         query = """
