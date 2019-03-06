@@ -22,8 +22,8 @@
         {% endif %}
     </ul>
     {% if show_image %}
-    <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
-    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
+    <!-- <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
+    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe> -->
     {% endif %}
     <h2>Members</h2>
     <ol>
@@ -58,6 +58,11 @@
             {% endif %}
             {% if member.target %}
                 <li>Target: {{ member.target }}</li>
+                {% if member.qid %}
+                  <li>WD QID: <a href={{ member.qid }}>{{ member.qid }}</a></li>
+                  <li>WD Label: {{ member.qLabel }}</li>
+                  <li>WD Aliases: {{ member.qAliases }}</li>
+                {% endif %}
             {% endif %}
             </ul>
         {% endif %}
