@@ -33,6 +33,7 @@
             <li>{{ member.uri }}</li>
             <ul>
                 <li>Label: {{ member.label }}</li>
+                <li>Other Strings: {{ member.all_labels }}</li>
                 <li>Type: {{ member.type }}</li>
             {% if "Event" in cluster.prototype.type %}
                 <li>Roles:
@@ -58,6 +59,11 @@
             {% endif %}
             {% if member.target %}
                 <li>Target: {{ member.target }}</li>
+                {% if member.qid %}
+                  <li>WD QID: <a href={{ member.qid }}>{{ member.qid }}</a></li>
+                  <li>WD Label: {{ member.qLabel }}</li>
+                  <li>WD Aliases: {{ member.qAliases }}</li>
+                {% endif %}
             {% endif %}
             </ul>
         {% endif %}
