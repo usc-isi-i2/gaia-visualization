@@ -468,7 +468,7 @@ ORDER BY ?start """
 ClusterSummary = namedtuple('ClusterSummary', ['uri', 'href', 'label', 'count'])
 
 
-def get_cluster_list(type_=None, limit=10, offset=0):
+def get_cluster_list(type_=None, limit=10, offset=0, sortby='size'):
     query = """
 SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
@@ -479,14 +479,19 @@ WHERE {
               aida:clusterMember ?member .
 }
 GROUP BY ?cluster ?label
-ORDER BY DESC(?memberN)
+ORDER BY order_by
 """
     if type_ == AIDA.Entity:
         query = query.replace('?type', type_.n3())
         query = query.replace('label_string', '?prototype aida:hasName ?label .')
+        query = query.replace('order_by', 'DESC(?memberN)')
     if type_ == AIDA.Event:
         query = query.replace('?type', type_.n3())
         query = query.replace('label_string', '?s rdf:subject ?prototype ; rdf:predicate rdf:type ; rdf:object ?label .')
+        if sortby == 'type':
+            query = query.replace('order_by', '?label DESC(?memberN)')
+        else:
+            query = query.replace('order_by', 'DESC(?memberN) ?label')
     if limit:
         query += " LIMIT " + str(limit)
     if offset:
