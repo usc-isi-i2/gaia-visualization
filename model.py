@@ -5,8 +5,6 @@ from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple, Counter
 import pickle
 from setting import endpoint, wikidata_endpoint
-import re
-import logging
 
 sparql = SPARQLStore(endpoint)
 wikidata_sparql = SPARQLStore(wikidata_endpoint)
@@ -16,7 +14,7 @@ namespaces = {
     'aida': AIDA,
     'rdf': RDF,
     'skos': SKOS,
-    'wdt' : WDT
+    'wdt': WDT
 }
 try:
   pickled = pickle.load(open('cluster.pkl', 'rb'))
@@ -276,7 +274,7 @@ class ClusterMember:
     def __init__(self, uri, label=None, type_=None, target=None):
         self.uri = URIRef(uri)
         self.__label = label
-        self.__allLabels = None
+        self.__all_labels = None
         self.__type = type_
         self.__target = target
         self.__qid = None
@@ -294,23 +292,23 @@ class ClusterMember:
         return self.__label
 
     @property
-    def allLabels(self):
-        if not self.__allLabels:
-            self.__allLabels = ""
+    def all_labels(self):
+        if not self.__all_labels:
+            self.__all_labels = ""
             query = """
-                SELECT ?member ?label
+                SELECT ?label (COUNT(?label) AS ?n)
                 WHERE {
-                  ?member aida:justifiedBy ?justification .
-                  ?justification skos:prefLabel ?label .
+                  ?member aida:justifiedBy/skos:prefLabel ?label .
                 }
+                GROUP BY ?label
+                ORDER BY DESC(?n)
             """
             labels = []
-            for item, label in sparql.query(query, namespaces, {'member': self.uri}):
-                labels.append(str(label))
-            if len(labels) > 0:
-                self.__allLabels = ", ".join(labels)
+            for label, n in sparql.query(query, namespaces, {'member': self.uri}):
+                labels.append('{}(x{})'.format(label, n))
+            self.__all_labels = ", ".join(labels)
 
-        return self.__allLabels
+        return self.__all_labels
 
     @property
     def type(self):
@@ -354,9 +352,7 @@ class ClusterMember:
         self.__qAliases = False
 
         if target and ":NIL" not in target:
-            matcher = re.search('.*:(.*)', self.target)
-            fbid = matcher.group(1)
-            fbid = "/" + fbid.replace(".", "/")
+            fbid = '/' + target[target.find(':')+1:].replace('.', '/')
             query = """
                 SELECT ?qid ?label WHERE {
                   ?qid wdt:P646 ?freebase .
@@ -377,10 +373,7 @@ class ClusterMember:
             aliases = []
             for qid, alias in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
                 aliases.append(str(alias))
-            if len(aliases) > 0:
-                self.__qAliases = ", ".join(aliases)
-
-        return
+            self.__qAliases = ', '.join(aliases)
 
     @property
     def context_extractor(self):

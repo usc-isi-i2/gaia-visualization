@@ -22,8 +22,8 @@
         {% endif %}
     </ul>
     {% if show_image %}
-    <!-- <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
-    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe> -->
+    <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
+    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
     {% endif %}
     <h2>Members</h2>
     <ol>
@@ -33,7 +33,7 @@
             <li>{{ member.uri }}</li>
             <ul>
                 <li>Label: {{ member.label }}</li>
-                <li>Other Strings: {{ member.allLabels }}</li>
+                <li>Other Strings: {{ member.all_labels }}</li>
                 <li>Type: {{ member.type }}</li>
             {% if "Event" in cluster.prototype.type %}
                 <li>Roles:
