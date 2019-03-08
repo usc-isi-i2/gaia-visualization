@@ -6,14 +6,17 @@
 </head>
 <body>
 <h1>{% if type_ == "entity" %} Entity list {% else %} Event list {% endif %}</h1>
+    {% if type_ == "event" %}
+      <p>Sort by <a href="/list/{{ type_ }}?sortby=type">Event Type</a> | <a href="/list/{{ type_ }}?sortby=size">Cluster Size</a>
+    {% endif %}
     {% for cluster in clusters %}
         <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
     {% endfor %}
 {% if offset > limit %}
-    <a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset-limit }}">Prev page</a>
+    <a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset-limit }}&sortby={{ sortby }}">Prev page</a>
 {% elif offset > 0 %}
-    <a href="/list/{{ type_ }}?limit={{ limit }}">Prev page</a>
+    <a href="/list/{{ type_ }}?limit={{ limit }}&sortby={{ sortby }}">Prev page</a>
 {% endif %}
-<a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset+limit }}">Next page</a>
+<a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset+limit }}&sortby={{ sortby }}">Next page</a>
 </body>
 </html>

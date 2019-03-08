@@ -51,18 +51,21 @@ def show_entity_cluster(uri):
 def show_entity_cluster_list(type_):
     limit = request.args.get('limit', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
+    sortby = request.args.get('sortby', default='size')
     if type_ == 'entity':
         return render_template('list.html',
                                type_='entity',
                                limit=limit,
                                offset=offset,
-                               clusters=get_cluster_list(types.Entity, limit, offset))
+                               sortby=sortby,
+                               clusters=get_cluster_list(types.Entity, limit, offset, sortby))
     elif type_ == 'event':
         return render_template('list.html',
                                type_='event',
                                limit=limit,
                                offset=offset,
-                               clusters=get_cluster_list(types.Events, limit, offset))
+                               sortby=sortby,
+                               clusters=get_cluster_list(types.Events, limit, offset, sortby))
     else:
         abort(404)
 
