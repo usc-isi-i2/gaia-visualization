@@ -64,6 +64,8 @@ class Cluster:
         self.__forward = None
         self.__backward = None
         self.__targets = Counter()
+        self.__qnodes = Counter()
+        self.__qnodesURL = {}
 
     @property
     def href(self):
@@ -105,7 +107,17 @@ class Cluster:
     def targetsSize(self):
         return len(self.targets)
 
+    @property
+    def qnodes(self):
+        if not self.__qnodes:
+            self._init_qnodes()
+        return self.__qnodes.most_common()
 
+    @property
+    def qnodesURL(self):
+        if not self.__qnodesURL:
+            self._init_qnodes()
+        return self.__qnodesURL
 
     @property
     def size(self):
@@ -205,6 +217,24 @@ GROUP BY ?member ?type ?target """
             if target:
                 self.__targets[str(target)] += 1
 
+    def _init_qnodes(self):
+        for target, count in self.targets:
+            if ":NIL" not in target:
+                fbid = '/' + target[target.find(':')+1:].replace('.', '/')
+                query = """
+                    SELECT ?qid ?label WHERE {
+                      ?qid wdt:P646 ?freebase .
+                      ?qid rdfs:label ?label filter (lang(?label) = "en") .
+                    }
+                    LIMIT 1
+                """
+                for qid, label in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
+                    qnodeURL = str(qid)
+                    qid = qnodeURL.rsplit('/', 1)[1]
+                    self.__qnodes[qid] = count
+                    if qid not in self.__qnodesURL:
+                        self.__qnodesURL[qid] = qnodeURL
+
     def _init_forward_clusters(self):
         query = """
 SELECT ?p ?o ?cnt
@@ -280,6 +310,7 @@ class ClusterMember:
         self.__qid = None
         self.__qLabel = None
         self.__qAliases = None
+        self.__qURL = None
         self.__source = None
         self.__context_pos = []
         self.__context_extractor = None
@@ -361,7 +392,8 @@ class ClusterMember:
                 LIMIT 1
             """
             for qid, label in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
-                self.__qid = qid
+                self.__qURL = str(qid)
+                self.__qid = self.__qURL.rsplit('/', 1)[1]
                 self.__qLabel = label
 
             query = """
