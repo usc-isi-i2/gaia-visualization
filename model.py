@@ -437,6 +437,29 @@ class ClusterMember:
             yield pred, ClusterMember(obj, obj_lbl, obj_type)
 
     @property
+    def events_by_role(self):
+      query = """
+      SELECT ?pred ?event ?event_type (MIN(?lbl) AS ?label)
+      WHERE {
+          ?event a aida:Event .
+          ?statement rdf:subject ?event ;
+                    rdf:predicate ?pred ;
+                    rdf:object ?obj .
+          ?event_state rdf:subject ?event ;
+                    rdf:predicate rdf:type ;
+                    rdf:object ?event_type .
+          OPTIONAL { ?event aida:justifiedBy/skos:prefLabel ?lbl }
+      }
+      GROUP BY ?pred ?event ?event_type
+      """
+      for pred, event, event_type, event_lbl in sparql.query(query, namespaces, {'obj': self.uri}):
+          if not event_lbl:
+              _, event_lbl = split_uri(event_type)
+          ind = pred.find('_')
+          pred = pred[ind+1:]
+          yield pred, ClusterMember(event, event_lbl, event_type)
+
+    @property
     def cluster(self):
         if self.__cluster is None:
             query = "SELECT ?cluster WHERE { ?membership aida:cluster ?cluster ; aida:clusterMember ?member . }"

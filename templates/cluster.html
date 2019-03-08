@@ -51,6 +51,17 @@
                         {% endfor %}
                     </ul>
                 </li>
+            {% else %}
+                <li>Events:
+                    <ul>
+                        {% for pred, event in member.events_by_role %}
+                        <li><b>{{ pred }}</b>:
+                            {{ event.label }}
+                            ({{ event.type_text }} in cluster
+                            <a href="{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
+                        {% endfor %}
+                    </ul>
+                </li>
             {% endif %}
             {% if member.source %}
                 <li>Source:
