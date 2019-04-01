@@ -24,16 +24,15 @@ WHERE {
   ?cluster aida:prototype ?prototype .
   ?prototype a aida:Entity .
   OPTIONAL { ?prototype aida:hasName ?label }
-  ?statement rdf:subject ?prototype ;
+  OPTIONAL { ?statement rdf:subject ?prototype ;
              rdf:predicate rdf:type ;
-             rdf:object ?category .
+             rdf:object ?category . }
 } """
 for cluster, label, type_ in sparql.query(query, namespaces):
-    if not label:
+    if not label and type_:
         _, label = split_uri(type_)
     cluster = str(cluster)
-    data[cluster]['label'] = str(label)
-    data[cluster]['type'] = str(type_)
+    data[cluster]['label'] = str(label) if label else cluster
 
 # Event
 query = """

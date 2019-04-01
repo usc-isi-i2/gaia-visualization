@@ -186,16 +186,17 @@ WHERE {
     ?cluster aida:prototype ?prototype .
     ?prototype a ?type .
     OPTIONAL { ?prototype aida:hasName ?label } .
-    ?statement a rdf:Statement ;
+    OPTIONAL { ?statement a rdf:Statement ;
                rdf:subject ?prototype ;
                rdf:predicate rdf:type ;
-               rdf:object ?category ;
+               rdf:object ?category ; }
 }
 GROUP BY ?prototype ?type ?category """
         for prototype, label, type_, cate in sparql.query(query, namespaces, {'cluster': self.uri}):
-            if not label:
+            if not label and cate:
                 _, label = split_uri(cate)
             self.__prototype = ClusterMember(prototype, label, type_)
+            print(self.__prototype.type)
             self.__type = cate
 
     def _init_cluster_members(self):
@@ -206,10 +207,10 @@ WHERE {
               aida:clusterMember ?member .
   OPTIONAL { ?member aida:hasName ?label } .
   OPTIONAL { ?member aida:link/aida:linkTarget ?target } .
-  ?statement a rdf:Statement ;
+  OPTIONAL {?statement a rdf:Statement ;
              rdf:subject ?member ;
              rdf:predicate rdf:type ;
-             rdf:object ?type .
+             rdf:object ?type }.
 }
 GROUP BY ?member ?type ?target """
         for member, label, type_, target in sparql.query(query, namespaces, {'cluster': self.uri}):
@@ -529,7 +530,6 @@ SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
     ?cluster aida:prototype ?prototype .
     ?prototype a ?type .
-    label_string
     ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
 }
@@ -538,7 +538,7 @@ ORDER BY order_by
 """
     if type_ == AIDA.Entity:
         query = query.replace('?type', type_.n3())
-        query = query.replace('label_string', '?prototype aida:hasName ?label .')
+        query = query.replace('label_string', 'OPTIONAL {?prototype aida:hasName ?label} .')
         query = query.replace('order_by', 'DESC(?memberN)')
     if type_ == AIDA.Event:
         query = query.replace('?type', type_.n3())
@@ -551,7 +551,13 @@ ORDER BY order_by
         query += " LIMIT " + str(limit)
     if offset:
         query += " OFFSET " + str(offset)
-    for u, l, c in sparql.query(query, namespaces):
+
+    results = sparql.query(query, namespaces)
+    result_gen = (x for x in results if x.cluster)
+    for r in result_gen:
+        l = r.label
+        u = r.cluster
+        c= r.memberN
         if isinstance(l, URIRef):
             _, l = split_uri(l)
         yield ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster').replace(
