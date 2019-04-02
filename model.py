@@ -269,7 +269,6 @@ GROUP BY ?member ?type ?target """
                 self.__groundtruth = set(res.json())
                 break
 
-        print(self.__groundtruth)
         if len(self.__groundtruth) > 0:
             self.__groundtruth_missing = self.__groundtruth.difference(member_set)
             self.__groundtruth_stats = {

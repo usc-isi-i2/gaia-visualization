@@ -1,26 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <meta charset="UTF-8">
     <title>Index for {{ name }}</title>
 </head>
 <body>
-{% if entities or events %}
-<h1>{{ name }} Clusters Top10</h1>
-    {% if entities %}
-    <h2>Entities</h2>
-        {% for cluster in entities %}
-            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
-        {% endfor %}
+    <div class="container-fluid">
+    {% if entities or events %}
+    <h1>{{ name }} Clusters Top10</h1>
+        {% if entities %}
+        <h2>Entities</h2>
+        <ul>
+            {% for cluster in entities %}
+                <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+            {% endfor %}
+        </ul>
         <a href="/list/entity">Show more...</a>
-    {% endif %}
-    {% if events %}
-    <h2>Events</h2>
-        {% for cluster in events %}
-            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
-        {% endfor %}
+        {% endif %}
+        <hr>
+        {% if events %}
+        <h2>Events</h2>
+        <ul>
+            {% for cluster in events %}
+                <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+            {% endfor %}
+        </ul>
         <a href="/list/event">Show more...</a>
+        {% endif %}
     {% endif %}
-{% endif %}
+    </div>
 </body>
 </html>

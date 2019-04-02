@@ -1,118 +1,144 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <meta charset="UTF-8">
     <title>Cluster {{ cluster.label }}</title>
 </head>
 <body>
-    <h1>{{ cluster.label }} ( {{ cluster.type }} )</h1>
-    <ul>
-        <li>URI: {{ cluster.uri }}</li>
-        <li>Size: {{ cluster.size }}</li>
-        <li>Label: {{ cluster.label }}</li>
-        <li>Type: {{ cluster.prototype.type }}</li>
-        <li>Targets:</li>
-        <ul>
-        {% for target, count in cluster.targets %}
-          <li>{{ target }}: {{ count }}x</li>
-        {% endfor %}
-        </ul>
-        <li>QNodes:
-        {% for qnode, count in cluster.qnodes %}
-          <a href="{{ cluster.qnodesURL[qnode] }}">{{ qnode }}</a> ({{ count }}) &nbsp;
-        {% endfor %}
-        {% if target_limit and cluster.targetsSize > target_limit %}
-            <a href="{{ cluster.href }}?image={{ show_image }}&limit={{ show_limit }}&targetLimit=false">Show all targets</a>
-        {% endif %}
-        {% if 'Entity' in cluster.prototype.type  %}
-            <li>Groundtruth:</li>
-            {% if cluster.groundtruth %}
-                Hit: {{ cluster.groundtruth_stats.hit }}
-                Miss: {{ cluster.groundtruth_stats.miss }}
-                Missing: {{ cluster.groundtruth_stats.missing }}
-            {% else %}
-                None
-            {% endif %}
-        {% endif %}
-
-    </ul>
-    {% if show_image %}
-    <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
-    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
-    {% endif %}
-    <h2>Members</h2>
-    <ol>
-    {# Only show limit numbers with a show all button #}
-    {% for member in cluster.members %}
-        {% if not show_limit or loop.index <= show_limit %}
-            {% if "Entity" in cluster.prototype.type and cluster.groundtruth %}
-                {% if str(member.uri) in cluster.groundtruth %}
-                    <li style="color:green">{{ member.uri }}</li>
-                {% else %}
-                    <li style="color:red">{{ member.uri }}</li>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col">
+                <h1>{{ cluster.label }} ( {{ cluster.type }} )</h1>
+                    <div><b>URI:</b> {{ cluster.uri }}</div>
+                    <div><b>Size:</b> {{ cluster.size }}</div>
+                    <div><b>Label:</b> {{ cluster.label }}</div>
+                    <div><b>Type:</b> {{ cluster.prototype.type }}</div>
+                    <div>
+                        <b>Targets:</b>
+                        <ul>
+                        {% for target, count in cluster.targets %}
+                          <li>{{ target }} ({{ count }})</li>
+                        {% endfor %}
+                        </ul>
+                        {% if target_limit and cluster.targetsSize > target_limit %}
+                            <a href="{{ cluster.href }}?image={{ show_image }}&limit={{ show_limit }}&targetLimit=false">Show all targets</a>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <b>QNodes:</b>
+                        <ul>
+                        {% for qnode, count in cluster.qnodes %}
+                            <li><a href="{{ cluster.qnodesURL[qnode] }}">{{ qnode }}</a> ({{ count }})</li>
+                        {% endfor %}
+                        </ul>
+                    </div>
+                    {% if 'Entity' in cluster.prototype.type  %}
+                        <div><b>Groundtruth:</b>
+                        {% if cluster.groundtruth %}
+                            <ul>
+                                <li>Hit: {{ cluster.groundtruth_stats.hit }}</li>
+                                <li>Miss: {{ cluster.groundtruth_stats.miss }}</li>
+                                <li>Missing: {{ cluster.groundtruth_stats.missing }}</li>
+                            </ul>
+                        {% else %}
+                            None
+                        {% endif %}
+                        </div>
+                    {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                {% if show_image %}
+                <div>
+                    <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
+                    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
+                </div>
                 {% endif %}
-            {% else %}
-                <li>{{ member.uri }}</li>
-            {% endif %}
-            <ul>
-                <li>Label: {{ member.label }}</li>
-                <li>Other Strings: {{ member.all_labels }}</li>
-                <li>Type: {{ member.type }}</li>
-            {% if "Event" in cluster.prototype.type %}
-                <li>Roles:
-                    <ul>
-                        {% for pred, obj in member.roles %}
-                            <li><b>{{ pred }}</b>:
-                                {{ obj.label }}
-                                ({{ obj.type_text }} in cluster
-                                <a href="{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
-                        {% endfor %}
-                    </ul>
-                </li>
-            {% else %}
-                <li>Events:
-                    <ul>
-                        {% for pred, event in member.events_by_role %}
-                        <li><b>{{ pred }}</b>:
-                            {{ event.label }}
-                            ({{ event.type_text }} in cluster
-                            <a href="{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
-                        {% endfor %}
-                    </ul>
-                </li>
-            {% endif %}
-            {% if member.source %}
-                <li>Source:
-                    {{ member.source }}
-                    <ul>
-                        {% for mention in member.mention %}
-                            <li>{{ mention }}</li>
-                        {% endfor %}
-                    </ul>
-                </li>
-            {% endif %}
-            {% if member.target %}
-                <li>Target: {{ member.target }}</li>
-                {% if member.qid %}
-                  <li>WD QID: <a href={{ member.qURL }}>{{ member.qid }}</a></li>
-                  <li>WD Label: {{ member.qLabel }}</li>
-                  <li>WD Aliases: {{ member.qAliases }}</li>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <h2>Members</h2>
+                <ol>
+                {# Only show limit numbers with a show all button #}
+                {% for member in cluster.members %}
+                    {% if not show_limit or loop.index <= show_limit %}
+                        {% if "Entity" in cluster.prototype.type and cluster.groundtruth %}
+                            {% if str(member.uri) in cluster.groundtruth %}
+                                <li class="text-success"><b>{{ member.uri }}</b></li>
+                            {% else %}
+                                <li class="text-danger"><b>{{ member.uri }}</b></li>
+                            {% endif %}
+                        {% else %}
+                            <li><string>{{ member.uri }}</string></li>
+                        {% endif %}
+                            <div><b>Label:</b> {{ member.label }}</div>
+                            <div><b>Other Strings:</b> {{ member.all_labels }}</div>
+                            <div><b>Type:</b> {{ member.type }}</div>
+                        {% if "Event" in cluster.prototype.type %}
+                            <div><b>Roles:</b>
+                                <ul>
+                                    {% for pred, obj in member.roles %}
+                                        <li><b>{{ pred }}</b>:
+                                            {{ obj.label }}
+                                            ({{ obj.type_text }} in cluster
+                                            <a href="{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <div><b>Events:</b>
+                                <ul>
+                                    {% for pred, event in member.events_by_role %}
+                                    <li><b>{{ pred }}</b>:
+                                        {{ event.label }}
+                                        ({{ event.type_text }} in cluster
+                                        <a href="{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        {% if member.source %}
+                            <div><b>Source:</b>
+                                {{ member.source }}
+                                <ul>
+                                    {% for mention in member.mention %}
+                                        <li>{{ mention }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                        {% if member.target %}
+                            <div><b>Target:</b> {{ member.target }}</div>
+                            {% if member.qid %}
+                              <div><b>WD QID:</b> <a href={{ member.qURL }}>{{ member.qid }}</a></div>
+                              <div><b>WD Label:</b> {{ member.qLabel }}</div>
+                              <div><b>WD Aliases:</b> {{ member.qAliases }}</div>
+                            {% endif %}
+                        {% endif %}
+                        </ul>
+                    {% endif %}
+                {% endfor %}
+                </ol>
+                {% if show_limit and cluster.size > show_limit %}
+                    <a href="{{ cluster.href }}?image=false&limit=false&targetLimit=false">Show all members</a>
                 {% endif %}
-            {% endif %}
-            </ul>
-        {% endif %}
-    {% endfor %}
-    {% if show_limit and cluster.size > show_limit %}
-        <a href="{{ cluster.href }}?image=false&limit=false&targetLimit=false">Show all members</a>
-    {% endif %}
-    {% if 'Entity' in cluster.prototype.type and cluster.groundtruth and cluster.groundtruth_missing %}
-        <h2>Missing Entities:</h2>
-        <ul>
-        {% for missing in cluster.groundtruth_missing %}
-            <li>{{ missing }}</li>
-        {% endfor %}
-        </u>
-    {% endif %}
-    </ol>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                {% if 'Entity' in cluster.prototype.type and cluster.groundtruth and cluster.groundtruth_missing %}
+                    <p></p><h2>Missing Entities:</h2>
+                    <ul>
+                    {% for missing in cluster.groundtruth_missing %}
+                        <li>{{ missing }}</li>
+                    {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </body>
 </html>
