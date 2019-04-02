@@ -1,9 +1,11 @@
-from flask import Flask, render_template, abort, request
+from flask import Flask, render_template, abort, request, jsonify
 from model import get_cluster, get_cluster_list, types, recover_doc_online
 from report import Report
 from setting import name
+import groundtruth as gt
 
 app = Flask(__name__, static_folder='static')
+app.jinja_env.globals.update(str=str)  # allow str function to be used in template
 
 
 @app.route('/')
@@ -107,7 +109,22 @@ def show_doc_pronoun(doc_id):
     return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
 
 
+@app.route('/groundtruth/<entity_id>', methods=['GET'])
+def cluster(entity_id):
+    gt_cluster = gt.search_cluster(entity_id)
+    return jsonify(gt_cluster)
+
+
+@app.route('/groundtruth', methods=['GET'])
+def groundtruth():
+    entity_uri = request.args.get('e', default=None)
+    if entity_uri:
+        gt_cluster = gt.search_cluster(entity_uri)
+        return jsonify(gt_cluster)
+    return jsonify(gt.get_all())
+
+
 if __name__ == '__main__':
     # app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     app.debug = True
-    app.run(host='0.0.0.0', port=5005)
+    app.run(host='0.0.0.0', port=5050)

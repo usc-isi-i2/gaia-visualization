@@ -4,7 +4,8 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple, Counter
 import pickle
-from setting import endpoint, wikidata_endpoint
+from setting import endpoint, wikidata_endpoint, groundtruth_url
+import requests
 
 sparql = SPARQLStore(endpoint)
 wikidata_sparql = SPARQLStore(wikidata_endpoint)
@@ -66,6 +67,9 @@ class Cluster:
         self.__targets = Counter()
         self.__qnodes = Counter()
         self.__qnodesURL = {}
+        self.__groundtruth = None
+        self.__groundtruth_stats = None
+        self.__groundtruth_missing = None
 
     @property
     def href(self):
@@ -179,6 +183,24 @@ class Cluster:
             return ans
         return False
 
+    @property
+    def groundtruth(self):
+        if self.__groundtruth is None:
+            self._init_groundtruth()
+        return self.__groundtruth
+
+    @property
+    def groundtruth_stats(self):
+        if self.__groundtruth_stats is None:
+            self._init_groundtruth()
+        return self.__groundtruth_stats
+
+    @property
+    def groundtruth_missing(self):
+        if not self.__groundtruth_missing:
+            self._init_groundtruth()
+        return self.__groundtruth_missing
+
     def _init_cluster_prototype(self):
         query = """
 SELECT ?prototype (MIN(?label) AS ?mlabel) ?type ?category
@@ -196,7 +218,6 @@ GROUP BY ?prototype ?type ?category """
             if not label and cate:
                 _, label = split_uri(cate)
             self.__prototype = ClusterMember(prototype, label, type_)
-            print(self.__prototype.type)
             self.__type = cate
 
     def _init_cluster_members(self):
@@ -235,6 +256,27 @@ GROUP BY ?member ?type ?target """
                     self.__qnodes[qid] = count
                     if qid not in self.__qnodesURL:
                         self.__qnodesURL[qid] = qnodeURL
+
+    def _init_groundtruth(self):
+        self.__groundtruth = set()
+        self.__groundtruth_stats = {}
+        self.__groundtruth_missing = []
+
+        member_set = set([str(m.uri) for m in self.members])
+        for m in member_set:
+            res = requests.get(groundtruth_url + '?e=' + m)
+            if len(res.json()) > 0:
+                self.__groundtruth = set(res.json())
+                break
+
+        print(self.__groundtruth)
+        if len(self.__groundtruth) > 0:
+            self.__groundtruth_missing = self.__groundtruth.difference(member_set)
+            self.__groundtruth_stats = {
+                'hit': len(member_set.intersection(self.__groundtruth)),
+                'miss': len(member_set.difference(self.__groundtruth)),
+                'missing': len(self.__groundtruth_missing)
+            }
 
     def _init_forward_clusters(self):
         query = """
@@ -530,6 +572,7 @@ SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
     ?cluster aida:prototype ?prototype .
     ?prototype a ?type .
+    label_string
     ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
 }
@@ -557,7 +600,7 @@ ORDER BY order_by
     for r in result_gen:
         l = r.label
         u = r.cluster
-        c= r.memberN
+        c = r.memberN
         if isinstance(l, URIRef):
             _, l = split_uri(l)
         yield ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster').replace(

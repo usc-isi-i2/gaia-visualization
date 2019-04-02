@@ -24,6 +24,16 @@
         {% if target_limit and cluster.targetsSize > target_limit %}
             <a href="{{ cluster.href }}?image={{ show_image }}&limit={{ show_limit }}&targetLimit=false">Show all targets</a>
         {% endif %}
+        {% if 'Entity' in cluster.prototype.type  %}
+            <li>Groundtruth:</li>
+            {% if cluster.groundtruth %}
+                Hit: {{ cluster.groundtruth_stats.hit }}
+                Miss: {{ cluster.groundtruth_stats.miss }}
+                Missing: {{ cluster.groundtruth_stats.missing }}
+            {% else %}
+                None
+            {% endif %}
+        {% endif %}
 
     </ul>
     {% if show_image %}
@@ -35,7 +45,15 @@
     {# Only show limit numbers with a show all button #}
     {% for member in cluster.members %}
         {% if not show_limit or loop.index <= show_limit %}
-            <li>{{ member.uri }}</li>
+            {% if "Entity" in cluster.prototype.type and cluster.groundtruth %}
+                {% if str(member.uri) in cluster.groundtruth %}
+                    <li style="color:green">{{ member.uri }}</li>
+                {% else %}
+                    <li style="color:red">{{ member.uri }}</li>
+                {% endif %}
+            {% else %}
+                <li>{{ member.uri }}</li>
+            {% endif %}
             <ul>
                 <li>Label: {{ member.label }}</li>
                 <li>Other Strings: {{ member.all_labels }}</li>
@@ -86,6 +104,14 @@
     {% endfor %}
     {% if show_limit and cluster.size > show_limit %}
         <a href="{{ cluster.href }}?image=false&limit=false&targetLimit=false">Show all members</a>
+    {% endif %}
+    {% if 'Entity' in cluster.prototype.type and cluster.groundtruth and cluster.groundtruth_missing %}
+        <h2>Missing Entities:</h2>
+        <ul>
+        {% for missing in cluster.groundtruth_missing %}
+            <li>{{ missing }}</li>
+        {% endfor %}
+        </u>
     {% endif %}
     </ol>
 </body>
