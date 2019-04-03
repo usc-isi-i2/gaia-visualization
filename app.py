@@ -109,10 +109,11 @@ def show_doc_pronoun(doc_id):
     return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
 
 
-@app.route('/groundtruth/<entity_id>', methods=['GET'])
-def cluster(entity_id):
-    gt_cluster = gt.search_cluster(entity_id)
-    return jsonify(gt_cluster)
+@app.route('/entity/gt')
+def show_entity_gt():
+    uri = request.args.get('e', default=None)
+    cluster = get_cluster(uri)
+    return render_template('groundtruth.html', cluster=cluster)
 
 
 @app.route('/groundtruth', methods=['GET'])

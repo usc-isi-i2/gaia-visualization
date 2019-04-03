@@ -36,10 +36,11 @@
                     {% if 'Entity' in cluster.prototype.type  %}
                         <div><b>Groundtruth:</b>
                         {% if cluster.groundtruth %}
+                            <a href="/entity/gt?e={{ cluster.uri }}">Details</a>
                             <ul>
-                                <li>Hit: {{ cluster.groundtruth_stats.hit }}</li>
-                                <li>Miss: {{ cluster.groundtruth_stats.miss }}</li>
-                                <li>Missing: {{ cluster.groundtruth_stats.missing }}</li>
+                                <li>Hit: {{ cluster.groundtruth.hit_count }}</li>
+                                <li>Miss: {{ cluster.groundtruth.miss_count }}</li>
+                                <li>Missing: {{ cluster.groundtruth.missing_count }}</li>
                             </ul>
                         {% else %}
                             None
@@ -66,13 +67,13 @@
                 {% for member in cluster.members %}
                     {% if not show_limit or loop.index <= show_limit %}
                         {% if "Entity" in cluster.prototype.type and cluster.groundtruth %}
-                            {% if str(member.uri) in cluster.groundtruth %}
+                            {% if str(member.uri) in cluster.groundtruth.members %}
                                 <li class="text-success"><b>{{ member.uri }}</b></li>
                             {% else %}
                                 <li class="text-danger"><b>{{ member.uri }}</b></li>
                             {% endif %}
                         {% else %}
-                            <li><string>{{ member.uri }}</string></li>
+                            <li><b>{{ member.uri }}</b></li>
                         {% endif %}
                             <div><b>Label:</b> {{ member.label }}</div>
                             <div><b>Other Strings:</b> {{ member.all_labels }}</div>
@@ -129,13 +130,17 @@
         </div>
         <div class="row">
             <div class="col">
-                {% if 'Entity' in cluster.prototype.type and cluster.groundtruth and cluster.groundtruth_missing %}
+                {% if 'Entity' in cluster.prototype.type and cluster.groundtruth %}
                     <p></p><h2>Missing Entities:</h2>
-                    <ul>
-                    {% for missing in cluster.groundtruth_missing %}
-                        <li>{{ missing }}</li>
-                    {% endfor %}
-                    </ul>
+                    {% if cluster.groundtruth.missing_count == 0 %}
+                        None
+                    {% else %}
+                        <ul>
+                        {% for missing in cluster.groundtruth.missing %}
+                            <li>{{ missing }}</li>
+                        {% endfor %}
+                        </ul>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>

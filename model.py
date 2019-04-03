@@ -68,8 +68,6 @@ class Cluster:
         self.__qnodes = Counter()
         self.__qnodesURL = {}
         self.__groundtruth = None
-        self.__groundtruth_stats = None
-        self.__groundtruth_missing = None
 
     @property
     def href(self):
@@ -189,18 +187,6 @@ class Cluster:
             self._init_groundtruth()
         return self.__groundtruth
 
-    @property
-    def groundtruth_stats(self):
-        if self.__groundtruth_stats is None:
-            self._init_groundtruth()
-        return self.__groundtruth_stats
-
-    @property
-    def groundtruth_missing(self):
-        if not self.__groundtruth_missing:
-            self._init_groundtruth()
-        return self.__groundtruth_missing
-
     def _init_cluster_prototype(self):
         query = """
 SELECT ?prototype (MIN(?label) AS ?mlabel) ?type ?category
@@ -258,24 +244,22 @@ GROUP BY ?member ?type ?target """
                         self.__qnodesURL[qid] = qnodeURL
 
     def _init_groundtruth(self):
-        self.__groundtruth = set()
-        self.__groundtruth_stats = {}
-        self.__groundtruth_missing = []
 
         member_set = set([str(m.uri) for m in self.members])
+        gt_set = set()
         for m in member_set:
             res = requests.get(groundtruth_url + '?e=' + m)
             if len(res.json()) > 0:
-                self.__groundtruth = set(res.json())
+                gt_set = set(res.json())
                 break
 
-        if len(self.__groundtruth) > 0:
-            self.__groundtruth_missing = self.__groundtruth.difference(member_set)
-            self.__groundtruth_stats = {
-                'hit': len(member_set.intersection(self.__groundtruth)),
-                'miss': len(member_set.difference(self.__groundtruth)),
-                'missing': len(self.__groundtruth_missing)
-            }
+        if len(gt_set) > 0:
+            hit = member_set.intersection(gt_set)
+            miss = member_set.difference(gt_set)
+            missing = gt_set.difference(member_set)
+            self.__groundtruth = Groundtruth(gt_set, hit, miss, missing)
+        else:
+            self.__groundtruth = False
 
     def _init_forward_clusters(self):
         query = """
@@ -604,6 +588,46 @@ ORDER BY order_by
             _, l = split_uri(l)
         yield ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster').replace(
           'http://www.columbia.edu', '/cluster'), l, c)
+
+
+class Groundtruth:
+    def __init__(self, members, hit, miss, missing):
+        self.__members = members
+        self.__hit = hit
+        self.__miss = miss
+        self.__missing = missing
+
+    @property
+    def members(self):
+        return self.__members
+
+    @property
+    def members_count(self):
+        return len(self.__members)
+
+    @property
+    def hit(self):
+        return self.__hit
+
+    @property
+    def hit_count(self):
+        return len(self.__hit)
+
+    @property
+    def miss(self):
+        return self.__miss
+
+    @property
+    def miss_count(self):
+        return len(self.__miss)
+
+    @property
+    def missing(self):
+        return self.__missing
+
+    @property
+    def missing_count(self):
+        return len(self.__missing)
 
 
 if __name__ == '__main__':
