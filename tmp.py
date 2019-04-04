@@ -33,6 +33,7 @@ for cluster, label, type_ in sparql.query(query, namespaces):
         _, label = split_uri(type_)
     cluster = str(cluster)
     data[cluster]['label'] = str(label) if label else cluster
+    data[cluster]['type'] = str(type_)
 
 # Event
 query = """
