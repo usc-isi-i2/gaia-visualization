@@ -1,5 +1,5 @@
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
-from source_context import SourceContext
+from source_context import LTFSourceContext
 from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple, Counter
@@ -436,7 +436,7 @@ class ClusterMember:
     @property
     def context_extractor(self):
         if self.__context_extractor is None:
-            self.__context_extractor = SourceContext(self.source)
+            self.__context_extractor = LTFSourceContext(self.source)
         return self.__context_extractor
 
     @property
