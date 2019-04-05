@@ -244,6 +244,14 @@ GROUP BY ?member ?type ?target """
                         self.__qnodesURL[qid] = qnodeURL
 
     def _init_groundtruth(self):
+        # query to find cluster of the missing member
+        query = '''
+            SELECT ?cluster 
+            WHERE {
+                ?membership aida:cluster ?cluster ;
+                aida:clusterMember ?member .
+            }
+        '''
 
         member_set = set([str(m.uri) for m in self.members])
         gt_set = set()
@@ -257,7 +265,16 @@ GROUP BY ?member ?type ?target """
             hit = member_set.intersection(gt_set)
             miss = member_set.difference(gt_set)
             missing = gt_set.difference(member_set)
-            self.__groundtruth = Groundtruth(gt_set, hit, miss, missing)
+            missing_dict = {}
+
+            if missing:
+                for m in missing:
+                    for c, in sparql.query(query, namespaces, {'member': URIRef(m)}):
+                        missing_dict[m] = str(c).replace('http://www.isi.edu/gaia/entities/', '')
+                        print(m, str(c))
+
+            self.__groundtruth = Groundtruth(gt_set, hit, miss, missing_dict)
+
         else:
             self.__groundtruth = False
 

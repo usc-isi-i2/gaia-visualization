@@ -36,7 +36,7 @@
                     {% if 'Entity' in cluster.prototype.type  %}
                         <div><b>Groundtruth:</b>
                         {% if cluster.groundtruth %}
-                            <a href="/entity/gt?e={{ cluster.uri }}">Details</a>
+                            <a href="/entity/gt?e={{ cluster.uri }}" target="_blank">Details</a>
                             <ul>
                                 <li>Hit: {{ cluster.groundtruth.hit_count }}</li>
                                 <li>Miss: {{ cluster.groundtruth.miss_count }}</li>
@@ -68,12 +68,12 @@
                     {% if not show_limit or loop.index <= show_limit %}
                         {% if "Entity" in cluster.prototype.type and cluster.groundtruth %}
                             {% if str(member.uri) in cluster.groundtruth.members %}
-                                <li class="text-success"><b>{{ member.uri }}</b></li>
+                                <li class="text-success" id="{{ member.uri }}"><b>{{ member.uri }}</b></li>
                             {% else %}
-                                <li class="text-danger"><b>{{ member.uri }}</b></li>
+                                <li class="text-danger" id="{{ member.uri }}"><b>{{ member.uri }}</b></li>
                             {% endif %}
                         {% else %}
-                            <li><b>{{ member.uri }}</b></li>
+                            <li id="{{ member.uri }}"><b>{{ member.uri }}</b></li>
                         {% endif %}
                             <div><b>Label:</b> {{ member.label }}</div>
                             <div><b>Other Strings:</b> {{ member.all_labels }}</div>
@@ -136,8 +136,8 @@
                         None
                     {% else %}
                         <ul>
-                        {% for missing in cluster.groundtruth.missing %}
-                            <li>{{ missing }}</li>
+                        {% for m, c in cluster.groundtruth.missing.items() %}
+                            <li><a href="{{ c }}#{{ m }}" target="_blank">{{ m }}</a></li>
                         {% endfor %}
                         </ul>
                     {% endif %}
