@@ -36,7 +36,7 @@
                     {% if 'Entity' in cluster.prototype.type  %}
                         <div><b>Groundtruth:</b>
                         {% if cluster.groundtruth %}
-                            <a href="/entity/gt?e={{ cluster.uri }}" target="_blank">Details</a>
+                            <a href="/cluster/entities/gt?e={{ cluster.uri }}" target="_blank">Details</a>
                             <ul>
                                 <li>Hit: {{ cluster.groundtruth.hit_count }}</li>
                                 <li>Miss: {{ cluster.groundtruth.miss_count }}</li>

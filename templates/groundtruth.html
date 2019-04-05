@@ -164,11 +164,9 @@
                         <div id="collapseMissing" class="collapse" aria-labelledby="headingMissing" data-parent="#myaccordion">
                             <div class="card-body">
                                 <ul>
-                                {% if cluster.groundtruth.missing_count > 0 %}
-                                    {% for missing in cluster.groundtruth.missing %}
-                                        <li>{{ missing }}</li>
-                                    {% endfor %}
-                                {% endif %}
+                                {% for m, c in cluster.groundtruth.missing.items() %}
+                                    <li><a href="{{ c }}#{{ m }}" target="_blank">{{ m }}</a></li>
+                                {% endfor %}
                                 </ul>
                             </div>
                         </div>

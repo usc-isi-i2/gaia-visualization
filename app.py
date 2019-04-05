@@ -109,7 +109,7 @@ def show_doc_pronoun(doc_id):
     return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
 
 
-@app.route('/entity/gt')
+@app.route('/cluster/entities/gt')
 def show_entity_gt():
     uri = request.args.get('e', default=None)
     cluster = get_cluster(uri)
