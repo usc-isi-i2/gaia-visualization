@@ -408,6 +408,12 @@ class ClusterMember:
         return self.__qid
 
     @property
+    def qURL(self):
+        if self.__qid is None and self.target:
+            self._init_qNode()
+        return self.__qURL
+
+    @property
     def qLabel(self):
         if self.__qLabel is None and self.target:
             self._init_qNode()
