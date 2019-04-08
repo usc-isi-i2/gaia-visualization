@@ -3,9 +3,11 @@ from model import get_cluster, get_cluster_list, types, recover_doc_online
 from report import Report
 from setting import name
 import groundtruth as gt
+import debug
 
 app = Flask(__name__, static_folder='static')
 app.jinja_env.globals.update(str=str)  # allow str function to be used in template
+app.config['JSON_AS_ASCII'] = True
 
 
 @app.route('/')
@@ -71,6 +73,7 @@ def show_entity_cluster_list(type_):
     else:
         abort(404)
 
+
 @app.route('/cluster/events/<uri>')
 @app.route('/events/<uri>')
 def show_event_cluster(uri):
@@ -78,6 +81,7 @@ def show_event_cluster(uri):
     show_image = request.args.get('image', default=True)
     show_limit = request.args.get('limit', default=100)
     return show_cluster(uri, show_image, show_limit)
+
 
 @app.route('/cluster/AIDA/<path:uri>')
 def show_columbia_cluster(uri):
@@ -123,6 +127,32 @@ def groundtruth():
         gt_cluster = gt.search_cluster(entity_uri)
         return jsonify(gt_cluster)
     return jsonify(gt.get_all())
+
+
+@app.route('/cluster/entities/debug', methods=['GET'])
+def debugger():
+    cluster_uri = request.args.get('cluster')
+    if cluster_uri:
+        result = debug.get_debug_for_cluster(cluster_uri)
+    else:
+        return not_found()
+
+    if result:
+        return jsonify(result)
+    else:
+        return not_found()
+
+
+@app.errorhandler(404)
+def not_found():
+    message = {
+            'status': 404,
+            'message': 'Not Found: ' + request.url,
+    }
+    resp = jsonify(message)
+    resp.status_code = 404
+
+    return resp
 
 
 if __name__ == '__main__':

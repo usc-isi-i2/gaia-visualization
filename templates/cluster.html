@@ -10,7 +10,12 @@
         <div class="row">
             <div class="col">
                 <h1>{{ cluster.label }} ( {{ cluster.type }} )</h1>
-                    <div><b>URI:</b> {{ cluster.uri }}</div>
+                    <div>
+                        <b>URI:</b> {{ cluster.uri }}
+                        {% if 'Entity' in cluster.prototype.type %}
+                            (<a href="/cluster/entities/debug?cluster={{ cluster.uri }}" target="_blank">Debug</a>)
+                        {% endif %}
+                    </div>
                     <div><b>Size:</b> {{ cluster.size }}</div>
                     <div><b>Label:</b> {{ cluster.label }}</div>
                     <div><b>Type:</b> {{ cluster.prototype.type }}</div>
