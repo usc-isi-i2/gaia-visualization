@@ -90,9 +90,12 @@
                         {% else %}
                             <li id="{{ member.uri }}"><b>{{ member.uri }}</b></li>
                         {% endif %}
-                            <div><b>Label:</b> {{ member.label }}</div>
-                            <div><b>Other Strings:</b> {{ member.all_labels }}</div>
-                            <div><b>Type:</b> {{ member.type }}</div>
+                        {% if str(member.uri) in cluster.debug_info.attractives %}
+                                <span class="badge badge-pill badge-primary">attractive</span>
+                        {% endif %}
+                        <div><b>Label:</b> {{ member.label }}</div>
+                        <div><b>Other Strings:</b> {{ member.all_labels }}</div>
+                        <div><b>Type:</b> {{ member.type }}</div>
                         {% if "Event" in cluster.prototype.type %}
                             <div><b>Roles:</b>
                                 <ul>
@@ -135,7 +138,7 @@
                             {% endif %}
                         {% endif %}
                         {% if 'Entity' in cluster.prototype.type %}
-                            <div><b>Debug</b>
+                            <div><b>Debug:</b>
                                 <pre><code>{{ cluster.debug_info.members[str(member.uri)] }}</code></pre>
                             </div>
                         {% endif %}
