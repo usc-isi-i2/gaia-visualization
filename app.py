@@ -1,7 +1,7 @@
 from flask import Flask, render_template, abort, request, jsonify
 from model import get_cluster, get_cluster_list, types, recover_doc_online
 from report import Report
-from setting import name
+from setting import repo, port
 import groundtruth as gt
 import debug
 
@@ -13,7 +13,7 @@ app.config['JSON_AS_ASCII'] = True
 @app.route('/')
 def hello_world():
     return render_template('index.html',
-                           name=name,
+                           name=repo,
                            entities=get_cluster_list(types.Entity),
                            events=get_cluster_list(types.Events))
 
@@ -158,4 +158,4 @@ def not_found(error=None):
 if __name__ == '__main__':
     # app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     app.debug = True
-    app.run(host='0.0.0.0', port=5050)
+    app.run(host='0.0.0.0', port=port)

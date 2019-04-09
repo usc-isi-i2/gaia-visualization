@@ -1,11 +1,12 @@
 import json_lines
+import setting
 
 clusters_debug = {}
 debugs = []
 
 
 def init_debug_from_file():
-    with open('clusters-debug.jl', 'r') as f:
+    with open(setting.debug_file, 'r') as f:
         for line in json_lines.reader(f):
             debugs.append(line)
 

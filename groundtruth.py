@@ -1,4 +1,5 @@
 import json_lines
+import setting
 
 # a list of lists
 groundtruth = []
@@ -6,7 +7,7 @@ prefix = 'http://www.isi.edu/gaia/entities/'
 
 
 def init_groundtruth():
-    with open('groundtruth.jl', 'r') as f:
+    with open(setting.gt_file, 'r') as f:
         for line in json_lines.reader(f):
             groundtruth.append(line)
 

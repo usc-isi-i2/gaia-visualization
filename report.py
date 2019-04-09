@@ -1,5 +1,5 @@
 from model import namespaces, sparql
-from setting import name
+from setting import repo
 import json
 
 
@@ -25,7 +25,7 @@ class ReportMemory(dict):
 
 
 class Report:
-    name = name
+    name = repo
 
     def __init__(self, update=False):
         self.mem = ReportMemory(update)

@@ -4,7 +4,7 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple, Counter
 import pickle
-from setting import endpoint, wikidata_endpoint, groundtruth_url, debug_url
+from setting import endpoint, wikidata_endpoint, groundtruth_url
 import requests
 import debug
 
