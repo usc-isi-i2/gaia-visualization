@@ -93,8 +93,7 @@
                         {% if str(member.uri) in cluster.debug_info.attractives %}
                                 <span class="badge badge-pill badge-primary">attractive</span>
                         {% endif %}
-                        <div><b>Label:</b> {{ member.label }}</div>
-                        <div><b>Other Strings:</b> {{ member.all_labels }}</div>
+                        <div><b>Labels:</b> {{ member.all_labels }}</div>
                         <div><b>Type:</b> {{ member.type }}</div>
                         {% if "Event" in cluster.prototype.type %}
                             <div><b>Roles:</b>
