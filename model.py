@@ -70,6 +70,7 @@ class Cluster:
         self.__qnodesURL = {}
         self.__groundtruth = None
         self.__debug_info = None
+        self.__all_labels = None
 
     @property
     def href(self):
@@ -80,6 +81,18 @@ class Cluster:
         if self.uri in pickled and 'label' in pickled[self.uri]:
             return pickled[self.uri]['label']
         return self.prototype.label
+
+    @property
+    def all_labels(self):
+        if not self.__all_labels:
+            self.__all_labels = Counter()
+            for m in self.members:
+                for l, c in m.all_labels:
+                    if l in self.__all_labels:
+                        self.__all_labels[l] += c
+                    else:
+                        self.__all_labels[l] = c
+        return self.__all_labels.most_common()
 
     @property
     def prototype(self):
@@ -380,7 +393,7 @@ class ClusterMember:
     @property
     def all_labels(self):
         if not self.__all_labels:
-            self.__all_labels = ""
+            self.__all_labels = Counter()
             query = """
                 SELECT ?label (COUNT(?label) AS ?n)
                 WHERE {
@@ -389,12 +402,10 @@ class ClusterMember:
                 GROUP BY ?label
                 ORDER BY DESC(?n)
             """
-            labels = []
             for label, n in sparql.query(query, namespaces, {'member': self.uri}):
-                labels.append('{}(x{})'.format(label, n))
-            self.__all_labels = ", ".join(labels)
+                self.__all_labels[label] = int(n)
 
-        return self.__all_labels
+        return self.__all_labels.most_common()
 
     @property
     def type(self):

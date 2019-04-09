@@ -27,7 +27,11 @@
                         {% endif %}
                     </div>
                     <div><b>Size:</b> {{ cluster.size }}</div>
-                    <div><b>Label:</b> {{ cluster.label }}</div>
+                    <div><b>Labels:</b>
+                    {% for label, count in cluster.all_labels %}
+                        {{ label }} ({{ count }})
+                    {% endfor %}
+                    </div>
                     <div><b>Type:</b> {{ cluster.prototype.type }}</div>
                     <div>
                         <b>Targets:</b>
@@ -93,7 +97,11 @@
                         {% if str(member.uri) in cluster.debug_info.attractives %}
                                 <span class="badge badge-pill badge-primary">attractive</span>
                         {% endif %}
-                        <div><b>Labels:</b> {{ member.all_labels }}</div>
+                        <div><b>Labels:</b>
+                            {% for label, count in member.all_labels %}
+                                {{ label }} ({{ count }})
+                            {% endfor %}
+                        </div>
                         <div><b>Type:</b> {{ member.type }}</div>
                         {% if "Event" in cluster.prototype.type %}
                             <div><b>Roles:</b>
