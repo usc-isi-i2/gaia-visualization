@@ -406,7 +406,23 @@ class ClusterMember:
                 ORDER BY DESC(?n)
             """
             for label, n in sparql.query(query, namespaces, {'member': self.uri}):
-                self.__all_labels[label] = int(n)
+                if label:
+                    self.__all_labels[label] = int(n)
+
+            query = """
+                SELECT ?label (COUNT(?label) AS ?n)
+                    WHERE {
+                      ?member aida:hasName ?label .
+                    }
+                    GROUP BY ?label
+                    ORDER BY DESC(?n)
+                """
+            for label, n in sparql.query(query, namespaces, {'member': self.uri}):
+                if label:
+                    if label in self.__all_labels:
+                        self.__all_labels[label] += int(n)
+                    else:
+                        self.__all_labels[label] = int(n)
 
         return self.__all_labels.most_common()
 
