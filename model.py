@@ -301,7 +301,10 @@ GROUP BY ?member ?type ?target """
 
     def _init_debug_info(self):
         info = debug.get_debug_for_cluster(str(self.uri))
-        self.__debug_info = DebugInfo(info['all_records'], info['attractive_records'], info['type'])
+        if info:
+            self.__debug_info = DebugInfo(info['all_records'], info['attractive_records'], info['type'])
+        else:
+            self.__debug_info = DebugInfo({}, [], None)
 
     def _init_forward_clusters(self):
         query = """
