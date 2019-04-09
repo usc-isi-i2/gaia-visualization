@@ -4,8 +4,9 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple, Counter
 import pickle
-from setting import endpoint, wikidata_endpoint, groundtruth_url
+from setting import endpoint, wikidata_endpoint, groundtruth_url, debug_url
 import requests
+import debug
 
 sparql = SPARQLStore(endpoint)
 wikidata_sparql = SPARQLStore(wikidata_endpoint)
@@ -68,6 +69,7 @@ class Cluster:
         self.__qnodes = Counter()
         self.__qnodesURL = {}
         self.__groundtruth = None
+        self.__debug_info = None
 
     @property
     def href(self):
@@ -187,6 +189,12 @@ class Cluster:
             self._init_groundtruth()
         return self.__groundtruth
 
+    @property
+    def debug_info(self):
+        if self.__debug_info is None:
+            self._init_debug_info()
+        return self.__debug_info
+
     def _init_cluster_prototype(self):
         query = """
 SELECT ?prototype (MIN(?label) AS ?mlabel) ?type ?category
@@ -277,6 +285,10 @@ GROUP BY ?member ?type ?target """
 
         else:
             self.__groundtruth = False
+
+    def _init_debug_info(self):
+        info = debug.get_debug_for_cluster(str(self.uri))
+        self.__debug_info = DebugInfo(info['all_records'], info['attractive_records'], info['type'])
 
     def _init_forward_clusters(self):
         query = """
@@ -651,6 +663,25 @@ class Groundtruth:
     @property
     def missing_count(self):
         return len(self.__missing)
+
+
+class DebugInfo:
+    def __init__(self, members, attractives, ctype):
+        self.__members = members
+        self.__attractives = attractives
+        self.__type = ctype
+
+    @property
+    def members(self):
+        return self.__members
+
+    @property
+    def attractives(self):
+        return self.__attractives
+
+    @property
+    def type(self):
+        return self.__type
 
 
 if __name__ == '__main__':

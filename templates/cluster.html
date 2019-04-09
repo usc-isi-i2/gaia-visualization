@@ -3,6 +3,16 @@
 <head>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <meta charset="UTF-8">
+    <style>
+         pre {
+            overflow-x: auto;
+            white-space: pre-wrap;
+            white-space: -moz-pre-wrap;
+            white-space: -pre-wrap;
+            white-space: -o-pre-wrap;
+            word-wrap: break-word;
+         }
+     </style>
     <title>Cluster {{ cluster.label }}</title>
 </head>
 <body>
@@ -123,6 +133,11 @@
                               <div><b>WD Label:</b> {{ member.qLabel }}</div>
                               <div><b>WD Aliases:</b> {{ member.qAliases }}</div>
                             {% endif %}
+                        {% endif %}
+                        {% if 'Entity' in cluster.prototype.type %}
+                            <div><b>Debug</b>
+                                <pre><code>{{ cluster.debug_info.members[str(member.uri)] }}</code></pre>
+                            </div>
                         {% endif %}
                         </ul>
                     {% endif %}
