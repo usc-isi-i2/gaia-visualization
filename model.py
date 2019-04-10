@@ -7,6 +7,7 @@ import pickle
 from setting import endpoint, wikidata_endpoint, groundtruth_url
 import requests
 import debug
+import json
 
 sparql = SPARQLStore(endpoint)
 wikidata_sparql = SPARQLStore(wikidata_endpoint)
@@ -302,9 +303,9 @@ GROUP BY ?member ?type ?target """
     def _init_debug_info(self):
         info = debug.get_debug_for_cluster(str(self.uri))
         if info:
-            self.__debug_info = DebugInfo(info['all_records'], info['attractive_records'], info['type'])
+            self.__debug_info = DebugInfo(info)
         else:
-            self.__debug_info = DebugInfo({}, [], None)
+            self.__debug_info = DebugInfo(None)
 
     def _init_forward_clusters(self):
         query = """
@@ -374,6 +375,7 @@ class SuperEdge:
 class ClusterMember:
     def __init__(self, uri, label=None, type_=None, target=None):
         self.uri = URIRef(uri)
+        self.__id = None
         self.__label = label
         self.__all_labels = None
         self.__type = type_
@@ -386,6 +388,12 @@ class ClusterMember:
         self.__context_pos = []
         self.__context_extractor = None
         self.__cluster: Cluster = None
+
+    @property
+    def id(self):
+        if not self.__id:
+            self.__id = self.uri.replace('http://www.isi.edu/gaia/entities/', '').replace('http://www.columbia.edu/entities/', '')
+        return self.__id
 
     @property
     def label(self):
@@ -696,22 +704,24 @@ class Groundtruth:
 
 
 class DebugInfo:
-    def __init__(self, members, attractives, ctype):
-        self.__members = members
-        self.__attractives = attractives
-        self.__type = ctype
+    def __init__(self, info):
+        self.__info = info
 
     @property
     def members(self):
-        return self.__members
+        return self.__info['all_records']
+
+    def print_member(self, uri):
+        m = self.members[uri]
+        return json.dumps(m, indent=4, sort_keys=True, ensure_ascii=False)
 
     @property
     def attractives(self):
-        return self.__attractives
+        return self.__info['attractive_records']
 
     @property
     def type(self):
-        return self.__type
+        return self.__info['type']
 
 
 if __name__ == '__main__':
