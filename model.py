@@ -435,6 +435,7 @@ class ClusterMember:
             """ % (open_clause, close_clause)
             for label, n in sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
+                    label = " ".join(label.split())  # remove double spaces
                     self.__all_labels[label] = int(n)
 
             query = """
@@ -449,6 +450,7 @@ class ClusterMember:
                 """ % (open_clause, close_clause)
             for label, n in sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
+                    label = " ".join(label.split())  # remove double spaces
                     if label in self.__all_labels:
                         self.__all_labels[label] += int(n)
                     else:
