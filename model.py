@@ -4,7 +4,7 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple, Counter
 import pickle
-from setting import endpoint, wikidata_endpoint, groundtruth_url
+from setting import endpoint, wikidata_endpoint, groundtruth_url, named_graph
 import requests
 import debug
 import json
@@ -24,6 +24,10 @@ try:
 except FileNotFoundError:
     pickled = {}
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
+open_clause = close_clause = ''
+if named_graph:
+    open_clause = 'GRAPH <%s> {' % named_graph
+    close_clause = '}'
 
 
 def get_cluster(uri):
@@ -36,6 +40,7 @@ def recover_doc_online(doc_id):
     import json
     query_label_location = """
     SELECT DISTINCT ?label ?start ?end ?justificationType WHERE {
+        %s
         ?justification a aida:TextJustification ;
                        skos:prefLabel ?label ;
                        aida:source ?source ;
@@ -43,9 +48,11 @@ def recover_doc_online(doc_id):
                        aida:endOffsetInclusive ?end ;
                        aida:privateData ?privateData .
         ?privateData aida:system <http://www.rpi.edu> ; aida:jsonContent ?justificationType
+        %s
     }
-    ORDER BY ?start
-    """
+    ORDER BY ?start 
+    """ % (open_clause, close_clause)
+
     doc_recover = ''
     lend = 0
     for label, start, end, j in sparql.query(query_label_location, namespaces, {'source': Literal(doc_id)}):
@@ -192,7 +199,7 @@ class Cluster:
 
     @classmethod
     def ask(cls, uri):
-        query = "ASK { ?cluster a aida:SameAsCluster }"
+        query = "ASK { %s ?cluster a aida:SameAsCluster %s}" % (open_clause, close_clause)
         for ans in sparql.query(query, namespaces, {'cluster': URIRef(uri)}):
             return ans
         return False
@@ -213,6 +220,7 @@ class Cluster:
         query = """
 SELECT ?prototype (MIN(?label) AS ?mlabel) ?type ?category
 WHERE {
+    %s
     ?cluster aida:prototype ?prototype .
     ?prototype a ?type .
     OPTIONAL { ?prototype aida:hasName ?label } .
@@ -220,8 +228,9 @@ WHERE {
                rdf:subject ?prototype ;
                rdf:predicate rdf:type ;
                rdf:object ?category ; }
+    %s
 }
-GROUP BY ?prototype ?type ?category """
+GROUP BY ?prototype ?type ?category """ % (open_clause, close_clause)
         for prototype, label, type_, cate in sparql.query(query, namespaces, {'cluster': self.uri}):
             if not label and cate:
                 _, label = split_uri(cate)
@@ -232,6 +241,7 @@ GROUP BY ?prototype ?type ?category """
         query = """
 SELECT ?member (MIN(?label) AS ?mlabel) ?type ?target
 WHERE {
+    %s
   ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
   OPTIONAL { ?member aida:hasName ?label } .
@@ -240,8 +250,9 @@ WHERE {
              rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type }.
+     %s
 }
-GROUP BY ?member ?type ?target """
+GROUP BY ?member ?type ?target """ % (open_clause, close_clause)
         for member, label, type_, target in sparql.query(query, namespaces, {'cluster': self.uri}):
             self.__members.append(ClusterMember(member, label, type_, target))
             if target:
@@ -253,7 +264,7 @@ GROUP BY ?member ?type ?target """
                 fbid = '/' + target[target.find(':')+1:].replace('.', '/')
                 query = """
                     SELECT ?qid ?label WHERE {
-                      ?qid wdt:P646 ?freebase .
+                      ?qid wdt:P646 ?freebase .  
                       ?qid rdfs:label ?label filter (lang(?label) = "en") .
                     }
                     LIMIT 1
@@ -270,8 +281,10 @@ GROUP BY ?member ?type ?target """
         query = '''
             SELECT ?cluster 
             WHERE {
+                %s
                 ?membership aida:cluster ?cluster ;
                 aida:clusterMember ?member .
+                %s
             }
         '''
 
@@ -293,7 +306,6 @@ GROUP BY ?member ?type ?target """
                 for m in missing:
                     for c, in sparql.query(query, namespaces, {'member': URIRef(m)}):
                         missing_dict[m] = str(c).replace('http://www.isi.edu/gaia/entities/', '')
-                        print(m, str(c))
 
             self.__groundtruth = Groundtruth(gt_set, hit, miss, missing_dict)
 
@@ -311,6 +323,7 @@ GROUP BY ?member ?type ?target """
         query = """
 SELECT ?p ?o ?cnt
 WHERE {
+    %s
   ?s aida:prototype ?proto1 .
   ?o aida:prototype ?proto2 .
   ?se rdf:subject ?proto1 ;
@@ -318,7 +331,8 @@ WHERE {
       rdf:object ?proto2 ;
       aida:confidence/aida:confidenceValue ?conf .
   BIND(ROUND(1/(2*(1-?conf))) as ?cnt)
-} """
+  %s
+} """ % (open_clause, close_clause)
         for p, o, cnt in sparql.query(query, namespaces, {'s': self.uri}):
             self.__forward.add(SuperEdge(self, Cluster(o), p, int(cnt)))
 
@@ -326,6 +340,7 @@ WHERE {
         query = """
 SELECT ?s ?p ?cnt
 WHERE {
+    %s
   ?s aida:prototype ?proto1 .
   ?o aida:prototype ?proto2 .
   ?se rdf:subject ?proto1 ;
@@ -333,7 +348,8 @@ WHERE {
       rdf:object ?proto2 ;
       aida:confidence/aida:confidenceValue ?conf .
   BIND(ROUND(1/(2*(1-?conf))) as ?cnt)
-} """
+    %s
+} """ % (open_clause, close_clause)
         for s, p, cnt in sparql.query(query, namespaces, {'o': self.uri}):
             self.__backward.add(SuperEdge(Cluster(s), self, p, int(cnt)))
 
@@ -343,9 +359,11 @@ WHERE {
         query = """
 SELECT (COUNT(?member) AS ?size)
 WHERE {
+    %s
     ?membership aida:cluster ?cluster ;
                 aida:clusterMember ?member .
-}  """
+    %s
+}  """ % (open_clause, close_clause)
         for size, in sparql.query(query, namespaces, {'cluster': self.uri}):
             return int(size)
         return 0
@@ -408,11 +426,13 @@ class ClusterMember:
             query = """
                 SELECT ?label (COUNT(?label) AS ?n)
                 WHERE {
+                    %s
                   ?member aida:justifiedBy/skos:prefLabel ?label .
+                    %s
                 }
                 GROUP BY ?label
                 ORDER BY DESC(?n)
-            """
+            """ % (open_clause, close_clause)
             for label, n in sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
                     self.__all_labels[label] = int(n)
@@ -420,11 +440,13 @@ class ClusterMember:
             query = """
                 SELECT ?label (COUNT(?label) AS ?n)
                     WHERE {
+                        %s
                       ?member aida:hasName ?label .
+                        %s
                     }
                     GROUP BY ?label
                     ORDER BY DESC(?n)
-                """
+                """ % (open_clause, close_clause)
             for label, n in sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
                     if label in self.__all_labels:
@@ -517,6 +539,7 @@ class ClusterMember:
         query = """
         SELECT ?pred ?obj ?objtype (MIN(?objlbl) AS ?objlabel)
         WHERE {
+            %s
             ?statement rdf:subject ?event ;
                        rdf:predicate ?pred ;
                        rdf:object ?obj .
@@ -524,9 +547,10 @@ class ClusterMember:
                       rdf:predicate rdf:type ;
                       rdf:object ?objtype .
             OPTIONAL { ?obj aida:hasName ?objlbl }
+            %s
         }
         GROUP BY ?pred ?obj ?objtype
-        """
+        """ % (open_clause, close_clause)
         for pred, obj, obj_type, obj_lbl in sparql.query(query, namespaces, {'event': self.uri}):
             if not obj_lbl:
                 _, obj_lbl = split_uri(obj_type)
@@ -540,6 +564,7 @@ class ClusterMember:
       query = """
       SELECT ?pred ?event ?event_type (MIN(?lbl) AS ?label)
       WHERE {
+            %s
           ?event a aida:Event .
           ?statement rdf:subject ?event ;
                     rdf:predicate ?pred ;
@@ -548,9 +573,10 @@ class ClusterMember:
                     rdf:predicate rdf:type ;
                     rdf:object ?event_type .
           OPTIONAL { ?event aida:justifiedBy/skos:prefLabel ?lbl }
+          %s
       }
       GROUP BY ?pred ?event ?event_type
-      """
+      """ % (open_clause, close_clause)
       for pred, event, event_type, event_lbl in sparql.query(query, namespaces, {'obj': self.uri}):
           if not event_lbl:
               _, event_lbl = split_uri(event_type)
@@ -561,7 +587,7 @@ class ClusterMember:
     @property
     def cluster(self):
         if self.__cluster is None:
-            query = "SELECT ?cluster WHERE { ?membership aida:cluster ?cluster ; aida:clusterMember ?member . }"
+            query = "SELECT ?cluster WHERE { %s ?membership aida:cluster ?cluster ; aida:clusterMember ?member . %s}" % (open_clause, close_clause)
             for cluster, in sparql.query(query, namespaces, {'member': self.uri}):
                 self.__cluster = get_cluster(cluster)
         return self.__cluster
@@ -570,6 +596,7 @@ class ClusterMember:
         query = """
 SELECT ?label ?type ?target
 WHERE {
+    %s
   OPTIONAL { ?member aida:hasName ?label }
   OPTIONAL { ?member aida:justifiedBy ?justification .
     ?justification skos:prefLabel ?label }
@@ -577,8 +604,9 @@ WHERE {
   ?statement rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
+    %s
 }
-LIMIT 1 """
+LIMIT 1 """ % (open_clause, close_clause)
         for label, type_, target in sparql.query(query, namespaces, {'member': self.uri}):
             if not label:
                 _, label = split_uri(type_)
@@ -590,12 +618,14 @@ LIMIT 1 """
         query = """
 SELECT DISTINCT ?source ?start ?end
 WHERE {
+    %s
   ?member aida:justifiedBy ?justification .
   ?justification aida:source ?source ;
                  aida:startOffset ?start ;
                  aida:endOffsetInclusive ?end .
+     %s
 }
-ORDER BY ?start """
+ORDER BY ?start """ % (open_clause, close_clause)
         for source, start, end in sparql.query(query, namespaces, {'member': self.uri}):
             self.__source = str(source)
             self.__context_pos.append((int(start), int(end)))
@@ -626,15 +656,17 @@ def get_cluster_list(type_=None, limit=10, offset=0, sortby='size'):
     query = """
 SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
 WHERE {
+    %s
     ?cluster aida:prototype ?prototype .
     ?prototype a ?type .
     label_string
     ?membership aida:cluster ?cluster ;
               aida:clusterMember ?member .
+    %s
 }
 GROUP BY ?cluster ?label
 ORDER BY order_by
-"""
+""" % (open_clause, close_clause)
     if type_ == AIDA.Entity:
         query = query.replace('?type', type_.n3())
         query = query.replace('label_string', 'OPTIONAL {?prototype aida:hasName ?label} .')

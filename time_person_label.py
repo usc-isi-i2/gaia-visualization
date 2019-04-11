@@ -2,19 +2,27 @@ from rdflib import URIRef
 import pickle
 from model import sparql, namespaces
 from model import pickled
+from setting import named_graph
+
+open_clause = close_clause = ''
+if named_graph:
+    open_clause = 'GRAPH <%s> {' % named_graph
+    close_clause = '}'
 
 
 def query_justification_lbl(uri):
     query = """
     SELECT ?lbl 
     WHERE {
+        %s
         ?ms aida:cluster ?cluster ;
             aida:clusterMember/aida:justifiedBy/skos:prefLabel ?lbl .
+        %s
     }
     GROUP BY ?lbl
     ORDER BY DESC(COUNT(?lbl))
     LIMIT 1
-    """
+    """ % (open_clause, close_clause)
     for lbl, in sparql.query(query, namespaces, {'cluster': URIRef(uri)}):
         return lbl
 
