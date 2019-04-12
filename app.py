@@ -1,9 +1,13 @@
+import os
 from flask import Flask, render_template, abort, request, jsonify
 from model import get_cluster, get_cluster_list, types, recover_doc_online
 from report import Report
-from setting import repo, port
+from setting import repo, port, repositories, endpoint, upload_folder, import_endpoint
 import groundtruth as gt
 import debug
+from importer import clusters_import
+from flask_wtf import Form
+from wtforms import SelectField, StringField, FileField, SubmitField
 
 app = Flask(__name__, static_folder='static')
 app.jinja_env.globals.update(str=str)  # allow str function to be used in template
@@ -118,6 +122,49 @@ def show_entity_gt():
     uri = request.args.get('e', default=None)
     cluster = get_cluster(uri)
     return render_template('groundtruth.html', cluster=cluster)
+
+
+@app.route('/cluster/import')
+def show_import():
+    return render_template('importer.html', repos=repositories)
+
+
+@app.route('/import', methods=['POST'])
+def import_clusters():
+
+    repo = request.form['repo']
+    graph_uri = request.form['graph_uri']
+    clusters_file = request.files['file']
+
+    if repo and graph_uri and clusters_file:
+        # upload file
+        filename = clusters_file.filename
+        file = os.path.join(upload_folder, filename)
+        clusters_file.save(file)
+
+        # to triple store
+        res = clusters_import.create_clusters(import_endpoint, repo, graph_uri, file, "http://www.isi.edu", "admin", "gaia@isi")
+
+        if res == 'success':
+            return '''
+            <!doctype html>
+            <title>Imported</title>
+            <h1>Imported</h1>
+            '''
+        else:
+            return '''
+            <!doctype html>
+            <title>Import Failed</title>
+            <h1>Import Failed</h1>
+            <h2>%s<h2>
+            ''' % res
+
+    else:
+        return '''
+        <!doctype html>
+        <title>Invalid</title>
+        <h1>Invalid</h1>
+        '''
 
 
 @app.route('/groundtruth', methods=['GET'])
