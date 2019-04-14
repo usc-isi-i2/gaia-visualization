@@ -144,7 +144,7 @@ def show_cluster(model: Model, uri, show_image=True, show_limit=100):
             isinstance(show_limit, int) and show_limit) or (show_limit.isdigit() and int(show_limit))
     if not cluster:
         abort(404)
-    return render_template('cluster.html', cluster=cluster, show_image=show_image, show_limit=show_limit)
+    return render_template('cluster.html', repo=model.repo, graph=model.graph, cluster=cluster, show_image=show_image, show_limit=show_limit)
 
 
 # @app.route('/report')
@@ -166,7 +166,7 @@ def show_entity_gt(repo):
     sparql = SPARQLStore(setting.endpoint + '/' + repo)
     model = Model(sparql, repo, graph_uri)
     cluster = model.get_cluster(uri)
-    return render_template('groundtruth.html', cluster=cluster)
+    return render_template('groundtruth.html', repo=repo, graph=graph_uri, cluster=cluster)
 
 
 @app.route('/cluster/import')
@@ -212,11 +212,12 @@ def import_clusters():
         '''
 
 
-@app.route('/groundtruth', methods=['GET'])
-def groundtruth():
+@app.route('/groundtruth/<repo>', methods=['GET'])
+def groundtruth(repo):
+    graph = request.args.get('g', default=None)
     entity_uri = request.args.get('e', default=None)
-    if entity_uri:
-        gt_cluster = gt.search_cluster(entity_uri)
+    if entity_uri and gt.has_gt(repo, graph):
+        gt_cluster = gt.search_cluster(repo, graph, entity_uri)
         return jsonify(gt_cluster)
     return jsonify(gt.get_all())
 

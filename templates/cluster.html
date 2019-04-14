@@ -47,7 +47,11 @@
                     {% if 'Entity' in cluster.prototype.type  %}
                         <div><b>Groundtruth:</b>
                         {% if cluster.groundtruth %}
-                            <a href="/cluster/entities/gt?e={{ cluster.uri }}" target="_blank">Details</a>
+                            {% if graph %}
+                            <a href="/cluster/entities/gt/{{ repo }}?g={{ graph }}&e={{ cluster.uri }}" target="_blank">Details</a>
+                            {% else %}
+                            <a href="/cluster/entities/gt/{{ repo }}?e={{ cluster.uri }}" target="_blank">Details</a>
+                            {% endif %}
                             <ul>
                                 <li>Hit: {{ cluster.groundtruth.hit_count }}</li>
                                 <li>Miss: {{ cluster.groundtruth.miss_count }}</li>

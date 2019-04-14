@@ -387,7 +387,7 @@ GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
                 aida:clusterMember ?member .
                 %s
             }
-        '''
+        ''' % (self.__open_clause, self.__close_clause)
 
         member_set = set([str(m.uri) for m in self.members])
         gt_set = set()
