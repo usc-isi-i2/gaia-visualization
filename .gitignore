@@ -3,3 +3,4 @@ __pycache__
 static/img
 cluster.pkl
 pkl
+debug

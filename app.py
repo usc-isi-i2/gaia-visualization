@@ -221,11 +221,12 @@ def groundtruth():
     return jsonify(gt.get_all())
 
 
-@app.route('/cluster/entities/debug', methods=['GET'])
-def debugger():
+@app.route('/cluster/entities/debug/<repo>', methods=['GET'])
+def debugger(repo):
+    graph = request.args.get('g', default=None)
     cluster_uri = request.args.get('cluster')
     if cluster_uri:
-        result = debug.get_debug_for_cluster(cluster_uri)
+        result = debug.get_debug_for_cluster(repo, graph, cluster_uri)
     else:
         return not_found()
 

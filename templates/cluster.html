@@ -25,9 +25,6 @@
                 <h1>{{ cluster.label }} ( {{ cluster.type }} )</h1>
                     <div>
                         <b>URI:</b> {{ cluster.uri }}
-                        {% if 'Entity' in cluster.prototype.type %}
-                            (<a href="/cluster/entities/debug?cluster={{ cluster.uri }}" target="_blank">Debug</a>)
-                        {% endif %}
                     </div>
                     <div><b>Size:</b> {{ cluster.size }}</div>
                     <div><b>Labels:</b>
@@ -89,7 +86,7 @@
                         {% else %}
                             <li id="{{ member.uri }}"><b>{{ member.uri }}</b></li>
                         {% endif %}
-                        {% if str(member.uri) in cluster.debug_info.attractives %}
+                        {% if cluster.has_debug and str(member.uri) in cluster.debug_info.attractives %}
                                 <span class="badge badge-pill badge-primary">attractive</span>
                         {% endif %}
                         <div><b>Labels:</b>
@@ -134,7 +131,7 @@
                         {% if member.target %}
                             <div><b>Target:</b> {{ member.target }}</div>
                         {% endif %}
-                        {% if 'Entity' in cluster.prototype.type %}
+                        {% if 'Entity' in cluster.prototype.type and cluster.has_debug%}
                             <p>
                                 <button class="btn btn-warning btn-sm" type="button" data-toggle="collapse" data-target="#debug-{{ member.id }}" aria-expanded="false" aria-controls="debug-{{ member.id }}">
                                     Debug

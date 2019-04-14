@@ -1,6 +1,6 @@
 repo = 'gaia0404ta1-testing'
 gt_file = 'groundtruth.jl'
-debug_file = 'clusters-debug-gaia0404.jl'
+# debug_file = 'gaia0404ta1-test.jl'
 port = '5050'
 
 endpoint = 'http://gaiadev01.isi.edu:7200/repositories'
@@ -13,7 +13,7 @@ debug_url = 'http://gaiadev01.isi.edu:' + port + '/cluster/entity/debug'
 
 # for importing clusters
 import_endpoint = 'http://gaiadev01.isi.edu:7200/repositories'
-repositories = ['gaia0404ta1-testing']
+repositories = ['gaia0304ta1-test', 'gaia0404ta1-test', 'gaia0404ta1-testing']
 # upload_folder = '/nas/home/jchen/gaia-visual-uploads'
 upload_folder = '/Users/jenniferchen/Documents/AIDA/clusters_upload'
 

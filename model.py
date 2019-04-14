@@ -33,6 +33,7 @@ class Model:
         pkl_file = 'pkl/' + repo
         if graph:
             pkl_file = pkl_file + '-' + re.sub('[^0-9a-zA-Z]+', '-', graph)
+        pkl_file = pkl_file + '.pkl'
         if not os.path.isfile(pkl_file):
             tmp.run(sparql, graph, pkl_file, namespaces, AIDA)
             time_person_label.run(sparql, graph, pkl_file, namespaces)
@@ -304,9 +305,16 @@ class Cluster:
         return self.__groundtruth
 
     @property
+    def has_debug(self):
+        return debug.has_debug(self.model.repo, self.model.graph)
+
+    @property
     def debug_info(self):
         if self.__debug_info is None:
-            self._init_debug_info()
+            if debug.has_debug(self.model.repo, self.model.graph):
+                self._init_debug_info()
+            else:
+                return None
         return self.__debug_info
 
     def _init_cluster_prototype(self):
@@ -406,7 +414,7 @@ GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
             self.__groundtruth = False
 
     def _init_debug_info(self):
-        info = debug.get_debug_for_cluster(str(self.uri))
+        info = debug.get_debug_for_cluster(self.model.repo, self.model.graph, str(self.uri))
         if info:
             self.__debug_info = DebugInfo(info)
         else:
