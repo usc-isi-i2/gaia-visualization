@@ -4,12 +4,15 @@ from rdflib import URIRef, Literal
 from rdflib.namespace import Namespace, RDF, SKOS, split_uri
 from collections import namedtuple, Counter
 import pickle
-from setting import endpoint, wikidata_endpoint, groundtruth_url, named_graph
+from setting import wikidata_endpoint, groundtruth_url
 import requests
 import debug
 import json
+import os
+import tmp
+import time_person_label
+import re
 
-sparql = SPARQLStore(endpoint)
 wikidata_sparql = SPARQLStore(wikidata_endpoint)
 AIDA = Namespace('https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#')
 WDT = Namespace('http://www.wikidata.org/prop/direct/')
@@ -19,54 +22,129 @@ namespaces = {
     'skos': SKOS,
     'wdt': WDT
 }
-try:
-  pickled = pickle.load(open('cluster.pkl', 'rb'))
-except FileNotFoundError:
-    pickled = {}
 types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
-open_clause = close_clause = ''
-if named_graph:
-    open_clause = 'GRAPH <%s> {' % named_graph
-    close_clause = '}'
 
 
-def get_cluster(uri):
-    if Cluster.ask(uri):
-        return Cluster(uri)
-    return None
+class Model:
+    def __init__(self, sparql, repo, graph):
+        self.__sparql = sparql
+        self.__repo = repo
+        self.__graph = graph
+        pkl_file = 'pkl/' + repo
+        if graph:
+            pkl_file = pkl_file + '-' + re.sub('[^0-9a-zA-Z]+', '-', graph)
+        if not os.path.isfile(pkl_file):
+            tmp.run(sparql, graph, pkl_file, namespaces, AIDA)
+            time_person_label.run(sparql, graph, pkl_file, namespaces)
+        self.__pickled = pickle.load(open(pkl_file, 'rb'))
 
+    @property
+    def graph(self):
+        return self.__graph
 
-def recover_doc_online(doc_id):
-    import json
-    query_label_location = """
-    SELECT DISTINCT ?label ?start ?end ?justificationType WHERE {
+    @property
+    def repo(self):
+        return self.__repo
+
+    @property
+    def sparql(self):
+        return self.__sparql
+
+    @property
+    def pickled(self):
+        return self.__pickled
+
+    def get_cluster(self, uri):
+        if Cluster.ask(self.__sparql, self.__graph, uri):
+            return Cluster(self, uri)
+        return None
+
+    def get_cluster_list(self, type_=None, limit=10, offset=0, sortby='size'):
+        open_clause = close_clause = ''
+        if self.__graph:
+            open_clause = 'GRAPH <%s> {' % self.__graph
+            close_clause = '}'
+        query = """
+    SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
+    WHERE {
         %s
-        ?justification a aida:TextJustification ;
-                       skos:prefLabel ?label ;
-                       aida:source ?source ;
-                       aida:startOffset ?start ;
-                       aida:endOffsetInclusive ?end ;
-                       aida:privateData ?privateData .
-        ?privateData aida:system <http://www.rpi.edu> ; aida:jsonContent ?justificationType
+        ?cluster aida:prototype ?prototype .
+        ?prototype a ?type .
+        label_string
+        ?membership aida:cluster ?cluster ;
+                  aida:clusterMember ?member .
         %s
     }
-    ORDER BY ?start 
+    GROUP BY ?cluster ?label
+    ORDER BY order_by
     """ % (open_clause, close_clause)
+        if type_ == AIDA.Entity:
+            query = query.replace('?type', type_.n3())
+            query = query.replace('label_string', 'OPTIONAL {?prototype aida:hasName ?label} .')
+            query = query.replace('order_by', 'DESC(?memberN)')
+        if type_ == AIDA.Event:
+            query = query.replace('?type', type_.n3())
+            query = query.replace('label_string',
+                                  '?s rdf:subject ?prototype ; rdf:predicate rdf:type ; rdf:object ?label .')
+            if sortby == 'type':
+                query = query.replace('order_by', '?label DESC(?memberN)')
+            else:
+                query = query.replace('order_by', 'DESC(?memberN) ?label')
+        if limit:
+            query += " LIMIT " + str(limit)
+        if offset:
+            query += " OFFSET " + str(offset)
 
-    doc_recover = ''
-    lend = 0
-    for label, start, end, j in sparql.query(query_label_location, namespaces, {'source': Literal(doc_id)}):
-        doc_recover += ' ' * (int(start)-lend)
-        if json.loads(j).get('justificationType') == 'pronominal_mention':
-            doc_recover += '<span style="color: red"><b>' + label + '</b></span>'
-        else:
-            doc_recover += '<u>' + label + '</u>'
-        lend = int(end)
-    return doc_recover
+        results = self.__sparql.query(query, namespaces)
+        result_gen = (x for x in results if x.cluster)
+        for r in result_gen:
+            l = r.label
+            u = r.cluster
+            c = r.memberN
+            if isinstance(l, URIRef):
+                _, l = split_uri(l)
+            href = u.replace('http://www.isi.edu/gaia', '/cluster').replace('http://www.columbia.edu', '/cluster')
+            href = href.replace('/entities/', '/entities/' + self.repo + '/')
+            if self.graph:
+                href = href + '?g=' + self.graph
+            yield ClusterSummary(u, href, l, c)
+
+    def recover_doc_online(self, doc_id):
+        import json
+        open_clause = close_clause = ''
+        if self.__graph:
+            open_clause = 'GRAPH <%s> {' % self.__graph
+            close_clause = '}'
+        query_label_location = """
+        SELECT DISTINCT ?label ?start ?end ?justificationType WHERE {
+            %s
+            ?justification a aida:TextJustification ;
+                           skos:prefLabel ?label ;
+                           aida:source ?source ;
+                           aida:startOffset ?start ;
+                           aida:endOffsetInclusive ?end ;
+                           aida:privateData ?privateData .
+            ?privateData aida:system <http://www.rpi.edu> ; aida:jsonContent ?justificationType
+            %s
+        }
+        ORDER BY ?start 
+        """ % (open_clause, close_clause)
+
+        doc_recover = ''
+        lend = 0
+        for label, start, end, j in self.__sparql.query(query_label_location, namespaces, {'source': Literal(doc_id)}):
+            doc_recover += ' ' * (int(start)-lend)
+            if json.loads(j).get('justificationType') == 'pronominal_mention':
+                doc_recover += '<span style="color: red"><b>' + label + '</b></span>'
+            else:
+                doc_recover += '<u>' + label + '</u>'
+            lend = int(end)
+        return doc_recover
 
 
 class Cluster:
-    def __init__(self, uri):
+    def __init__(self, model, uri):
+        self.model = model
         self.uri = URIRef(uri)
         self.__prototype = None
         self.__type = None
@@ -80,14 +158,24 @@ class Cluster:
         self.__debug_info = None
         self.__all_labels = None
 
+        if model.graph:
+            self.__open_clause = 'GRAPH <%s> {' % self.model.graph
+            self.__close_clause = '}'
+        else:
+            self.__open_clause = self.__close_clause = ''
+
     @property
     def href(self):
-        return self.uri.replace('http://www.isi.edu/gaia', '/cluster').replace('http://www.columbia.edu', '/cluster')
+        res = self.uri.replace('http://www.isi.edu/gaia', '/cluster').replace('http://www.columbia.edu', '/cluster')
+        res = res.replace('/entities/', '/entities/' + self.model.repo + '/')
+        if self.model.graph:
+            res = res + '?g=' + self.model.graph
+        return res
 
     @property
     def label(self):
-        if self.uri in pickled and 'label' in pickled[self.uri]:
-            return pickled[self.uri]['label']
+        if self.uri in self.model.pickled and 'label' in self.model.pickled[self.uri]:
+            return self.model.pickled[self.uri]['label']
         return self.prototype.label
 
     @property
@@ -110,8 +198,8 @@ class Cluster:
 
     @property
     def type(self):
-        if self.uri in pickled and 'type' in pickled[self.uri]:
-            return pickled[self.uri]['type']
+        if self.uri in self.model.pickled and 'type' in self.model.pickled[self.uri]:
+            return self.model.pickled[self.uri]['type']
         if not self.__type:
             self._init_cluster_prototype()
         return self.__type
@@ -193,12 +281,17 @@ class Cluster:
             return name
 
         from graph import SuperEdgeBasedGraph
-        graph = SuperEdgeBasedGraph(self.neighborhood(), self, self.uri)
+        graph = SuperEdgeBasedGraph(self.model, self.neighborhood(), self, self.uri)
         path = graph.dot()
         return graph.name
 
     @classmethod
-    def ask(cls, uri):
+    def ask(cls, sparql, graph, uri):
+        if graph:
+            open_clause = 'GRAPH <%s> {' % graph
+            close_clause = '}'
+        else:
+            open_clause = close_clause = ''
         query = "ASK { %s ?cluster a aida:SameAsCluster %s}" % (open_clause, close_clause)
         for ans in sparql.query(query, namespaces, {'cluster': URIRef(uri)}):
             return ans
@@ -230,11 +323,11 @@ WHERE {
                rdf:object ?category ; }
     %s
 }
-GROUP BY ?prototype ?type ?category """ % (open_clause, close_clause)
-        for prototype, label, type_, cate in sparql.query(query, namespaces, {'cluster': self.uri}):
+GROUP BY ?prototype ?type ?category """ % (self.__open_clause, self.__close_clause)
+        for prototype, label, type_, cate in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
             if not label and cate:
                 _, label = split_uri(cate)
-            self.__prototype = ClusterMember(prototype, label, type_)
+            self.__prototype = ClusterMember(self.model, prototype, label, type_)
             self.__type = cate
 
     def _init_cluster_members(self):
@@ -252,9 +345,9 @@ WHERE {
              rdf:object ?type }.
      %s
 }
-GROUP BY ?member ?type ?target """ % (open_clause, close_clause)
-        for member, label, type_, target in sparql.query(query, namespaces, {'cluster': self.uri}):
-            self.__members.append(ClusterMember(member, label, type_, target))
+GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
+        for member, label, type_, target in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
+            self.__members.append(ClusterMember(self.model, member, label, type_, target))
             if target:
                 self.__targets[str(target)] += 1
 
@@ -304,7 +397,7 @@ GROUP BY ?member ?type ?target """ % (open_clause, close_clause)
 
             if missing:
                 for m in missing:
-                    for c, in sparql.query(query, namespaces, {'member': URIRef(m)}):
+                    for c, in self.model.sparql.query(query, namespaces, {'member': URIRef(m)}):
                         missing_dict[m] = str(c).replace('http://www.isi.edu/gaia/entities/', '')
 
             self.__groundtruth = Groundtruth(gt_set, hit, miss, missing_dict)
@@ -332,8 +425,8 @@ WHERE {
       aida:confidence/aida:confidenceValue ?conf .
   BIND(ROUND(1/(2*(1-?conf))) as ?cnt)
   %s
-} """ % (open_clause, close_clause)
-        for p, o, cnt in sparql.query(query, namespaces, {'s': self.uri}):
+} """ % (self.__open_clause, self.__close_clause)
+        for p, o, cnt in self.model.sparql.query(query, namespaces, {'s': self.uri}):
             self.__forward.add(SuperEdge(self, Cluster(o), p, int(cnt)))
 
     def _init_backward_clusters(self):
@@ -349,13 +442,13 @@ WHERE {
       aida:confidence/aida:confidenceValue ?conf .
   BIND(ROUND(1/(2*(1-?conf))) as ?cnt)
     %s
-} """ % (open_clause, close_clause)
-        for s, p, cnt in sparql.query(query, namespaces, {'o': self.uri}):
+} """ % (self.__open_clause, self.__close_clause)
+        for s, p, cnt in self.model.sparql.query(query, namespaces, {'o': self.uri}):
             self.__backward.add(SuperEdge(Cluster(s), self, p, int(cnt)))
 
     def _query_for_size(self):
-        if self.uri in pickled and 'size' in pickled[self.uri]:
-            return pickled[self.uri]['size']
+        if self.uri in self.model.pickled and 'size' in self.model.pickled[self.uri]:
+            return self.model.pickled[self.uri]['size']
         query = """
 SELECT (COUNT(?member) AS ?size)
 WHERE {
@@ -363,8 +456,8 @@ WHERE {
     ?membership aida:cluster ?cluster ;
                 aida:clusterMember ?member .
     %s
-}  """ % (open_clause, close_clause)
-        for size, in sparql.query(query, namespaces, {'cluster': self.uri}):
+}  """ % (self.__open_clause, self.__close_clause)
+        for size, in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
             return int(size)
         return 0
 
@@ -391,7 +484,8 @@ class SuperEdge:
 
 
 class ClusterMember:
-    def __init__(self, uri, label=None, type_=None, target=None):
+    def __init__(self, model, uri, label=None, type_=None, target=None):
+        self.model = model
         self.uri = URIRef(uri)
         self.__id = None
         self.__label = label
@@ -406,6 +500,12 @@ class ClusterMember:
         self.__context_pos = []
         self.__context_extractor = None
         self.__cluster: Cluster = None
+
+        if model.graph:
+            self.__open_clause = 'GRAPH <%s> {' % self.model.graph
+            self.__close_clause = '}'
+        else:
+            self.__open_clause = self.__close_clause = ''
 
     @property
     def id(self):
@@ -432,8 +532,8 @@ class ClusterMember:
                 }
                 GROUP BY ?label
                 ORDER BY DESC(?n)
-            """ % (open_clause, close_clause)
-            for label, n in sparql.query(query, namespaces, {'member': self.uri}):
+            """ % (self.__open_clause, self.__close_clause)
+            for label, n in self.model.sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
                     label = " ".join(label.split())  # remove double spaces
                     self.__all_labels[label] = int(n)
@@ -447,8 +547,8 @@ class ClusterMember:
                     }
                     GROUP BY ?label
                     ORDER BY DESC(?n)
-                """ % (open_clause, close_clause)
-            for label, n in sparql.query(query, namespaces, {'member': self.uri}):
+                """ % (self.__open_clause, self.__close_clause)
+            for label, n in self.model.sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
                     label = " ".join(label.split())  # remove double spaces
                     if label in self.__all_labels:
@@ -552,8 +652,8 @@ class ClusterMember:
             %s
         }
         GROUP BY ?pred ?obj ?objtype
-        """ % (open_clause, close_clause)
-        for pred, obj, obj_type, obj_lbl in sparql.query(query, namespaces, {'event': self.uri}):
+        """ % (self.__open_clause, self.__close_clause)
+        for pred, obj, obj_type, obj_lbl in self.model.sparql.query(query, namespaces, {'event': self.uri}):
             if not obj_lbl:
                 _, obj_lbl = split_uri(obj_type)
             # _, pred = split_uri(pred)
@@ -578,20 +678,20 @@ class ClusterMember:
           %s
       }
       GROUP BY ?pred ?event ?event_type
-      """ % (open_clause, close_clause)
-      for pred, event, event_type, event_lbl in sparql.query(query, namespaces, {'obj': self.uri}):
+      """ % (self.__open_clause, self.__close_clause)
+      for pred, event, event_type, event_lbl in self.model.sparql.query(query, namespaces, {'obj': self.uri}):
           if not event_lbl:
               _, event_lbl = split_uri(event_type)
           ind = pred.find('_')
           pred = pred[ind+1:]
-          yield pred, ClusterMember(event, event_lbl, event_type)
+          yield pred, ClusterMember(self.model, event, event_lbl, event_type)
 
     @property
     def cluster(self):
         if self.__cluster is None:
-            query = "SELECT ?cluster WHERE { %s ?membership aida:cluster ?cluster ; aida:clusterMember ?member . %s}" % (open_clause, close_clause)
-            for cluster, in sparql.query(query, namespaces, {'member': self.uri}):
-                self.__cluster = get_cluster(cluster)
+            query = "SELECT ?cluster WHERE { %s ?membership aida:cluster ?cluster ; aida:clusterMember ?member . %s}" % (self.__open_clause, self.__close_clause)
+            for cluster, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
+                self.__cluster = self.model.get_cluster(cluster)
         return self.__cluster
 
     def _init_member(self):
@@ -608,8 +708,8 @@ WHERE {
              rdf:object ?type .
     %s
 }
-LIMIT 1 """ % (open_clause, close_clause)
-        for label, type_, target in sparql.query(query, namespaces, {'member': self.uri}):
+LIMIT 1 """ % (self.__open_clause, self.__close_clause)
+        for label, type_, target in self.model.sparql.query(query, namespaces, {'member': self.uri}):
             if not label:
                 _, label = split_uri(type_)
             self.__label = label
@@ -627,8 +727,8 @@ WHERE {
                  aida:endOffsetInclusive ?end .
      %s
 }
-ORDER BY ?start """ % (open_clause, close_clause)
-        for source, start, end in sparql.query(query, namespaces, {'member': self.uri}):
+ORDER BY ?start """ % (self.__open_clause, self.__close_clause)
+        for source, start, end in self.model.sparql.query(query, namespaces, {'member': self.uri}):
             self.__source = str(source)
             self.__context_pos.append((int(start), int(end)))
 
@@ -652,49 +752,6 @@ ORDER BY ?start """ % (open_clause, close_clause)
 
 
 ClusterSummary = namedtuple('ClusterSummary', ['uri', 'href', 'label', 'count'])
-
-
-def get_cluster_list(type_=None, limit=10, offset=0, sortby='size'):
-    query = """
-SELECT ?cluster ?label (COUNT(?member) AS ?memberN)
-WHERE {
-    %s
-    ?cluster aida:prototype ?prototype .
-    ?prototype a ?type .
-    label_string
-    ?membership aida:cluster ?cluster ;
-              aida:clusterMember ?member .
-    %s
-}
-GROUP BY ?cluster ?label
-ORDER BY order_by
-""" % (open_clause, close_clause)
-    if type_ == AIDA.Entity:
-        query = query.replace('?type', type_.n3())
-        query = query.replace('label_string', 'OPTIONAL {?prototype aida:hasName ?label} .')
-        query = query.replace('order_by', 'DESC(?memberN)')
-    if type_ == AIDA.Event:
-        query = query.replace('?type', type_.n3())
-        query = query.replace('label_string', '?s rdf:subject ?prototype ; rdf:predicate rdf:type ; rdf:object ?label .')
-        if sortby == 'type':
-            query = query.replace('order_by', '?label DESC(?memberN)')
-        else:
-            query = query.replace('order_by', 'DESC(?memberN) ?label')
-    if limit:
-        query += " LIMIT " + str(limit)
-    if offset:
-        query += " OFFSET " + str(offset)
-
-    results = sparql.query(query, namespaces)
-    result_gen = (x for x in results if x.cluster)
-    for r in result_gen:
-        l = r.label
-        u = r.cluster
-        c = r.memberN
-        if isinstance(l, URIRef):
-            _, l = split_uri(l)
-        yield ClusterSummary(u, u.replace('http://www.isi.edu/gaia', '/cluster').replace(
-          'http://www.columbia.edu', '/cluster'), l, c)
 
 
 class Groundtruth:
@@ -757,11 +814,3 @@ class DebugInfo:
     def type(self):
         return self.__info['type']
 
-
-if __name__ == '__main__':
-    # cluster = get_cluster('http://www.isi.edu/gaia/entities/2dd85bb7-fea9-44ab-b3b8-d2272d874a25-cluster')
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/5c5da320-3a64-4144-9c03-d6533b898050-cluster')
-    print(cluster.label, cluster.uri, cluster.type, cluster.prototype.type)
-    print(cluster.size)
-    for member in cluster.members:
-        print(member.label, member.type, member.source, member.uri)

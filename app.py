@@ -1,40 +1,68 @@
 import os
 from flask import Flask, render_template, abort, request, jsonify
-from model import get_cluster, get_cluster_list, types, recover_doc_online
-from report import Report
-from setting import repo, port, repositories, endpoint, upload_folder, import_endpoint
+# from model import get_cluster, get_cluster_list, types, recover_doc_online
+from model import Model, types
+# from setting import repo, port, repositories, upload_folder, import_endpoint
+import setting
 import groundtruth as gt
 import debug
 from importer import clusters_import
-from flask_wtf import Form
-from wtforms import SelectField, StringField, FileField, SubmitField
+import requests
+from rdflib.plugins.stores.sparqlstore import SPARQLStore
+import tmp
+import time_person_label
+
 
 app = Flask(__name__, static_folder='static')
 app.jinja_env.globals.update(str=str)  # allow str function to be used in template
 app.config['JSON_AS_ASCII'] = True
 
 
+def generate_pkl(sparql, graph, file_path):
+    tmp.run(sparql, graph, file_path)
+    time_person_label.run(sparql, graph, file_path)
+
+
 @app.route('/')
-def hello_world():
+def index():
+    repos = {}
+    for repo in setting.repositories:
+        repos[repo] = []
+        endpoint = setting.endpoint + '/' + repo + '/rdf-graphs'
+        res = requests.get(endpoint, headers={'Accept': 'application/sparql-results+json'},
+                           auth=(setting.username, setting.password))
+        result = res.json()['results']['bindings']
+        for r in result:
+            repos[repo].append(r['contextID']['value'])
     return render_template('index.html',
-                           name=repo,
-                           entities=get_cluster_list(types.Entity),
-                           events=get_cluster_list(types.Events))
+                           repos=repos)
+
+
+@app.route('/<repo>')
+def hello_world(repo):
+    graph_uri = request.args.get('g', '')
+    sparql = SPARQLStore(setting.endpoint + '/' + repo)
+    model = Model(sparql, repo, graph_uri)
+    return render_template('clusters.html',
+                           repo=repo,
+                           graph=graph_uri,
+                           entities=model.get_cluster_list(types.Entity),
+                           events=model.get_cluster_list(types.Events))
 
 
 @app.route('/js/<path>')
 def static_js(path):
-    return app.send_static_file('js/'+path)
+    return app.send_static_file('js/' + path)
 
 
 @app.route('/img/<path>')
 def static_img(path):
-    return app.send_static_file('img/'+path)
+    return app.send_static_file('img/' + path)
 
 
 @app.route('/css/<path>')
 def static_css(path):
-    return app.send_static_file('css/'+path)
+    return app.send_static_file('css/' + path)
 
 
 @app.route('/viz/<name>')
@@ -47,91 +75,107 @@ def show_viz(name):
     return render_template('sviz.html', name=name)
 
 
-@app.route('/cluster/entities/<uri>')
-@app.route('/entities/<uri>')
-def show_entity_cluster(uri):
+@app.route('/cluster/entities/<repo>/<uri>')
+@app.route('/entities/<repo>/<uri>')
+def show_entity_cluster(repo, uri):
     uri = 'http://www.isi.edu/gaia/entities/' + uri
+    graph_uri = request.args.get('g', default=None)
     show_image = request.args.get('image', default=True)
     show_limit = request.args.get('limit', default=100)
-    return show_cluster(uri, show_image, show_limit)
+    sparql = SPARQLStore(setting.endpoint + '/' + repo)
+    model = Model(sparql, repo, graph_uri)
+    return show_cluster(model, uri, show_image, show_limit)
 
-@app.route('/list/<type_>')
-def show_entity_cluster_list(type_):
+
+@app.route('/list/<type_>/<repo>')
+def show_entity_cluster_list(type_, repo):
+    graph_uri = request.args.get('g', default=None)
     limit = request.args.get('limit', default=100, type=int)
     offset = request.args.get('offset', default=0, type=int)
     sortby = request.args.get('sortby', default='size')
+    sparql = SPARQLStore(setting.endpoint + '/' + repo)
+    model = Model(sparql, repo, graph_uri)
     if type_ == 'entity':
         return render_template('list.html',
                                type_='entity',
+                               repo=repo,
+                               graph=graph_uri,
                                limit=limit,
                                offset=offset,
                                sortby=sortby,
-                               clusters=get_cluster_list(types.Entity, limit, offset, sortby))
+                               clusters=model.get_cluster_list(types.Entity, limit, offset, sortby))
     elif type_ == 'event':
         return render_template('list.html',
                                type_='event',
+                               repo=repo,
+                               graph=graph_uri,
                                limit=limit,
                                offset=offset,
                                sortby=sortby,
-                               clusters=get_cluster_list(types.Events, limit, offset, sortby))
+                               clusters=model.get_cluster_list(types.Events, limit, offset, sortby))
     else:
         abort(404)
 
 
-@app.route('/cluster/events/<uri>')
-@app.route('/events/<uri>')
-def show_event_cluster(uri):
+@app.route('/cluster/events/<repo>/<uri>')
+@app.route('/events/<repo>/<uri>')
+def show_event_cluster(repo, uri):
     uri = 'http://www.isi.edu/gaia/events/' + uri
+    graph_uri = request.args.get('g')
     show_image = request.args.get('image', default=True)
     show_limit = request.args.get('limit', default=100)
-    return show_cluster(uri, show_image, show_limit)
+    sparql = SPARQLStore(setting.endpoint + '/' + repo)
+    model = Model(sparql, repo, graph_uri)
+    return show_cluster(model, uri, show_image, show_limit)
 
 
-@app.route('/cluster/AIDA/<path:uri>')
-def show_columbia_cluster(uri):
-    uri = 'http://www.columbia.edu/AIDA/' + uri
-    show_image = request.args.get('image', default=True)
-    show_limit = request.args.get('limit', default=100)
-    return show_cluster(uri, show_image, show_limit)
+# @app.route('/cluster/AIDA/<path:uri>')
+# def show_columbia_cluster(uri):
+#     uri = 'http://www.columbia.edu/AIDA/' + uri
+#     show_image = request.args.get('image', default=True)
+#     show_limit = request.args.get('limit', default=100)
+#     return show_cluster(uri, show_image, show_limit)
+#
 
-
-def show_cluster(uri, show_image=True, show_limit=100):
-    cluster = get_cluster(uri)
+def show_cluster(model: Model, uri, show_image=True, show_limit=100):
+    cluster = model.get_cluster(uri)
     show_image = show_image not in {False, 'False', 'false', 'no', '0'}
     show_limit = show_limit not in {False, 'False', 'false', 'no', '0'} and (
-                isinstance(show_limit, int) and show_limit) or (show_limit.isdigit() and int(show_limit))
+            isinstance(show_limit, int) and show_limit) or (show_limit.isdigit() and int(show_limit))
     if not cluster:
         abort(404)
     return render_template('cluster.html', cluster=cluster, show_image=show_image, show_limit=show_limit)
 
 
-@app.route('/report')
-def show_report():
-    update = request.args.get('update', default=False, type=bool)
-    report = Report(update)
-    return render_template('report.html', report=report)
+# @app.route('/report')
+# def show_report():
+#     update = request.args.get('update', default=False, type=bool)
+#     report = Report(update)
+#     return render_template('report.html', report=report)
 
 
-@app.route('/doc/<doc_id>')
-def show_doc_pronoun(doc_id):
-    return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
+# @app.route('/doc/<doc_id>')
+# def show_doc_pronoun(doc_id):
+#     return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
 
 
-@app.route('/cluster/entities/gt')
-def show_entity_gt():
+@app.route('/cluster/entities/gt/<repo>')
+def show_entity_gt(repo):
     uri = request.args.get('e', default=None)
-    cluster = get_cluster(uri)
+    graph_uri = request.args.get('g', default=None)
+    sparql = SPARQLStore(setting.endpoint + '/' + repo)
+    model = Model(sparql, repo, graph_uri)
+    cluster = model.get_cluster(uri)
     return render_template('groundtruth.html', cluster=cluster)
 
 
 @app.route('/cluster/import')
 def show_import():
-    return render_template('importer.html', repos=repositories)
+    return render_template('importer.html', repos=setting.repositories)
 
 
 @app.route('/import', methods=['POST'])
 def import_clusters():
-
     repo = request.form['repo']
     graph_uri = request.form['graph_uri']
     clusters_file = request.files['file']
@@ -139,11 +183,12 @@ def import_clusters():
     if repo and graph_uri and clusters_file:
         # upload file
         filename = clusters_file.filename
-        file = os.path.join(upload_folder, filename)
+        file = os.path.join(setting.upload_folder, filename)
         clusters_file.save(file)
 
         # to triple store
-        res = clusters_import.create_clusters(import_endpoint, repo, graph_uri, file, "http://www.isi.edu", "admin", "gaia@isi")
+        res = clusters_import.create_clusters(setting.import_endpoint, repo, graph_uri, file, "http://www.isi.edu",
+                                              "admin", "gaia@isi")
 
         if res == 'success':
             return '''
@@ -193,8 +238,8 @@ def debugger():
 @app.errorhandler(404)
 def not_found(error=None):
     message = {
-            'status': 404,
-            'message': 'Not Found: ' + request.url,
+        'status': 404,
+        'message': 'Not Found: ' + request.url,
     }
     resp = jsonify(message)
     resp.status_code = 404
@@ -205,4 +250,4 @@ def not_found(error=None):
 if __name__ == '__main__':
     # app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
     app.debug = True
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=setting.port)

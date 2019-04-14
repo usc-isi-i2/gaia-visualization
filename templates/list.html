@@ -9,7 +9,11 @@
     <div class="container-fluid">
         <h1>{% if type_ == "entity" %} Entity list {% else %} Event list {% endif %}</h1>
             {% if type_ == "event" %}
-              <p>Sort by <a href="/list/{{ type_ }}?sortby=type">Event Type</a> | <a href="/list/{{ type_ }}?sortby=size">Cluster Size</a>
+                {% if graph %}
+                    <p>Sort by <a href="/list/{{ type_ }}/{{ repo }}?g={{ graph }}&sortby=type">Event Type</a> | <a href="/list/{{ type_ }}/{{ repo }}?g={{ graph }}&sortby=size">Cluster Size</a>
+                {$ else %}
+                    <p>Sort by <a href="/list/{{ type_ }}/{{ repo }}?sortby=type">Event Type</a> | <a href="/list/{{ type_ }}/{{ repo }}?sortby=size">Cluster Size</a>
+                {% endif %}
             {% endif %}
             <ul>
             {% for cluster in clusters %}
@@ -17,11 +21,23 @@
             {% endfor %}
             </ul>
         {% if offset > limit %}
-            <a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset-limit }}&sortby={{ sortby }}">Prev page</a>
+            {% if graph %}
+                <a href="/list/{{ type_ }}/{{ repo }}?g={{ graph }}&limit={{ limit }}&offset={{ offset-limit }}&sortby={{ sortby }}">Prev page</a>
+            {% else %}
+                <a href="/list/{{ type_ }}/{{ repo }}?limit={{ limit }}&offset={{ offset-limit }}&sortby={{ sortby }}">Prev page</a>
+            {% endif %}
         {% elif offset > 0 %}
-            <a href="/list/{{ type_ }}?limit={{ limit }}&sortby={{ sortby }}">Prev page</a>
+            {% if graph %}
+                <a href="/list/{{ type_ }}/{{ repo }}?g={{ graph }}&limit={{ limit }}&sortby={{ sortby }}">Prev page</a>
+            {% else %}
+                <a href="/list/{{ type_ }}/{{ repo }}?limit={{ limit }}&sortby={{ sortby }}">Prev page</a>
+            {% endif %}
         {% endif %}
-        <a href="/list/{{ type_ }}?limit={{ limit }}&offset={{ offset+limit }}&sortby={{ sortby }}">Next page</a>
+        {% if graph %}
+            <a href="/list/{{ type_ }}/{{ repo }}?g={{ graph }}&limit={{ limit }}&offset={{ offset+limit }}&sortby={{ sortby }}">Next page</a>
+        {% else %}
+            <a href="/list/{{ type_ }}/{{ repo }}?limit={{ limit }}&offset={{ offset+limit }}&sortby={{ sortby }}">Next page</a>
+        {% endif %}
     </div>
 </body>
 </html>

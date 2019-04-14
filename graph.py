@@ -1,6 +1,6 @@
 from rdflib.namespace import split_uri
 from typing import List
-from model import SuperEdge, get_cluster, AIDA
+from model import SuperEdge, AIDA
 import uuid
 import subprocess
 import pickle
@@ -171,7 +171,7 @@ class ClusterGraph(Graph):
 
 
 class SuperEdgeBasedGraph(ClusterGraph):
-    def __init__(self, superedges: List[SuperEdge], base=None, name=None):
+    def __init__(self, model, superedges: List[SuperEdge], base=None, name=None):
         nodes = {base} if base else set()
         edges = set()
         for se in superedges:
@@ -182,14 +182,14 @@ class SuperEdgeBasedGraph(ClusterGraph):
         if isinstance(name, str) and name.startswith('http'):
             _, name = split_uri(name)
         # super().__init__([self._cluster_node_from_cluster(c) for c in nodes], edges, name)
-        super().__init__([self._cluster_node_from_pickle(c.uri) for c in nodes], edges, name)
+        super().__init__([self._cluster_node_from_pickle(model, c.uri) for c in nodes], edges, name)
 
     @staticmethod
     def _cluster_node_from_cluster(cluster):
         return ClusterNode(cluster.uri, cluster.size, cluster.label, type_=cluster.prototype.type)
 
     @staticmethod
-    def _cluster_node_from_pickle(uri):
+    def _cluster_node_from_pickle(model, uri):
         try:
             c = clusters[str(uri)]
             if c['type'] != AIDA.Relation:
@@ -198,13 +198,13 @@ class SuperEdgeBasedGraph(ClusterGraph):
                 return ClusterNode(uri, c['size'], '', type_=c['type'])
         except KeyError:
             print("Failed to hit the cluster cache with uri: ", uri)
-            return SuperEdgeBasedGraph._cluster_node_from_cluster(get_cluster(uri))
+            return SuperEdgeBasedGraph._cluster_node_from_cluster(model.get_cluster(uri))
 
 
 
-if __name__ == '__main__':
-    cluster = get_cluster('http://www.isi.edu/gaia/entities/4242167c-60ee-4ea5-9efa-105d41ce8306-cluster')
-    # cluster = get_cluster('http://www.isi.edu/gaia/assertions/bdc5d9d1-5167-4d93-b2c1-d0b3e62bf12c-cluster')
-    neighborhood = cluster.neighborhood()
-    graph = SuperEdgeBasedGraph(neighborhood, cluster, cluster.uri)
-    dot_string = graph.dot()
+# if __name__ == '__main__':
+#     cluster = get_cluster('http://www.isi.edu/gaia/entities/4242167c-60ee-4ea5-9efa-105d41ce8306-cluster')
+#     # cluster = get_cluster('http://www.isi.edu/gaia/assertions/bdc5d9d1-5167-4d93-b2c1-d0b3e62bf12c-cluster')
+#     neighborhood = cluster.neighborhood()
+#     graph = SuperEdgeBasedGraph(neighborhood, cluster, cluster.uri)
+#     dot_string = graph.dot()

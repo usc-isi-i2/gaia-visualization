@@ -1,9 +1,9 @@
-from model import namespaces, sparql
+from model import namespaces
 from setting import repo
 import json
 
 
-def count_query(query):
+def count_query(sparql, query):
     for count, in sparql.query(query, namespaces):
         return int(count)
 
@@ -92,7 +92,7 @@ class Report:
         return self.mem[name]
 
     @staticmethod
-    def __num_of_entities_by_type(type_, cluster=False):
+    def __num_of_entities_by_type(sparql, type_, cluster=False):
         filter_ = '?cluster aida:prototype ?e' if cluster else 'FILTER NOT EXISTS { ?cluster aida:prototype ?e }'
         query = '''
         SELECT ?cate (COUNT(?e) AS ?eN)

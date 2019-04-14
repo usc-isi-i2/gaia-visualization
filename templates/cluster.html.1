@@ -47,6 +47,14 @@
                             <a href="{{ cluster.href }}?image={{ show_image }}&limit={{ show_limit }}&targetLimit=false">Show all targets</a>
                         {% endif %}
                     </div>
+                    <div>
+                        <b>QNodes:</b>
+                        <ul>
+                        {% for qnode, count in cluster.qnodes %}
+                            <li><a href="{{ cluster.qnodesURL[qnode] }}">{{ qnode }}</a> ({{ count }})</li>
+                        {% endfor %}
+                        </ul>
+                    </div>
                     {% if 'Entity' in cluster.prototype.type  %}
                         <div><b>Groundtruth:</b>
                         {% if cluster.groundtruth %}
@@ -133,6 +141,11 @@
                         {% endif %}
                         {% if member.target %}
                             <div><b>Target:</b> {{ member.target }}</div>
+                            {% if member.qid %}
+                              <div><b>WD QID:</b> <a href={{ member.qURL }}>{{ member.qid }}</a></div>
+                              <div><b>WD Label:</b> {{ member.qLabel }}</div>
+                              <div><b>WD Aliases:</b> {{ member.qAliases }}</div>
+                            {% endif %}
                         {% endif %}
                         {% if 'Entity' in cluster.prototype.type %}
                             <p>
