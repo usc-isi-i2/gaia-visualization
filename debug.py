@@ -2,7 +2,8 @@ import json_lines
 import re
 import os
 
-debugs = {}
+debugs = {}  # rep/graph to its raw debug data
+debugs_cache = {}
 
 
 def has_debug(repo, graph):

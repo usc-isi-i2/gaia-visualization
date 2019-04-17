@@ -129,13 +129,13 @@ def show_event_cluster(repo, uri):
     return show_cluster(model, uri, show_image, show_limit)
 
 
-# @app.route('/cluster/AIDA/<path:uri>')
-# def show_columbia_cluster(uri):
-#     uri = 'http://www.columbia.edu/AIDA/' + uri
-#     show_image = request.args.get('image', default=True)
-#     show_limit = request.args.get('limit', default=100)
-#     return show_cluster(uri, show_image, show_limit)
-#
+@app.route('/cluster/AIDA/<path:uri>')
+def show_columbia_cluster(uri):
+    uri = 'http://www.columbia.edu/AIDA/' + uri
+    show_image = request.args.get('image', default=True)
+    show_limit = request.args.get('limit', default=100)
+    return show_cluster(uri, show_image, show_limit)
+
 
 def show_cluster(model: Model, uri, show_image=True, show_limit=100):
     cluster = model.get_cluster(uri)
@@ -147,16 +147,16 @@ def show_cluster(model: Model, uri, show_image=True, show_limit=100):
     return render_template('cluster.html', repo=model.repo, graph=model.graph, cluster=cluster, show_image=show_image, show_limit=show_limit)
 
 
-# @app.route('/report')
-# def show_report():
-#     update = request.args.get('update', default=False, type=bool)
-#     report = Report(update)
-#     return render_template('report.html', report=report)
+@app.route('/report')
+def show_report():
+    update = request.args.get('update', default=False, type=bool)
+    report = Report(update)
+    return render_template('report.html', report=report)
 
 
-# @app.route('/doc/<doc_id>')
-# def show_doc_pronoun(doc_id):
-#     return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
+@app.route('/doc/<doc_id>')
+def show_doc_pronoun(doc_id):
+    return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
 
 
 @app.route('/cluster/entities/gt/<repo>')

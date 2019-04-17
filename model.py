@@ -34,6 +34,7 @@ class Model:
         if graph:
             pkl_file = pkl_file + '-' + re.sub('[^0-9a-zA-Z]+', '-', graph)
         pkl_file = pkl_file + '.pkl'
+        print(pkl_file)
         if not os.path.isfile(pkl_file):
             tmp.run(sparql, graph, pkl_file, namespaces, AIDA)
             time_person_label.run(sparql, graph, pkl_file, namespaces)
@@ -106,6 +107,7 @@ class Model:
                 _, l = split_uri(l)
             href = u.replace('http://www.isi.edu/gaia', '/cluster').replace('http://www.columbia.edu', '/cluster')
             href = href.replace('/entities/', '/entities/' + self.repo + '/')
+            href = href.replace('/events/', '/events/' + self.repo + '/')
             if self.graph:
                 href = href + '?g=' + self.graph
             yield ClusterSummary(u, href, l, c)
