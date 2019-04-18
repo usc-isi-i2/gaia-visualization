@@ -171,6 +171,7 @@ class Cluster:
     def href(self):
         res = self.uri.replace('http://www.isi.edu/gaia', '/cluster').replace('http://www.columbia.edu', '/cluster')
         res = res.replace('/entities/', '/entities/' + self.model.repo + '/')
+        res = res.replace('/events/', '/events/' + self.repo + '/')
         if self.model.graph:
             res = res + '?g=' + self.model.graph
         return res
@@ -437,7 +438,7 @@ WHERE {
   %s
 } """ % (self.__open_clause, self.__close_clause)
         for p, o, cnt in self.model.sparql.query(query, namespaces, {'s': self.uri}):
-            self.__forward.add(SuperEdge(self, Cluster(o), p, int(cnt)))
+            self.__forward.add(SuperEdge(self, Cluster(self.model, o), p, int(cnt)))
 
     def _init_backward_clusters(self):
         query = """
@@ -454,7 +455,7 @@ WHERE {
     %s
 } """ % (self.__open_clause, self.__close_clause)
         for s, p, cnt in self.model.sparql.query(query, namespaces, {'o': self.uri}):
-            self.__backward.add(SuperEdge(Cluster(s), self, p, int(cnt)))
+            self.__backward.add(SuperEdge(Cluster(self.model, s), self, p, int(cnt)))
 
     def _query_for_size(self):
         if self.uri in self.model.pickled and 'size' in self.model.pickled[self.uri]:
@@ -669,7 +670,7 @@ class ClusterMember:
             # _, pred = split_uri(pred)
             ind = pred.find('_')
             pred = pred[ind+1:]
-            yield pred, ClusterMember(obj, obj_lbl, obj_type)
+            yield pred, ClusterMember(self.model, obj, obj_lbl, obj_type)
 
     @property
     def events_by_role(self):

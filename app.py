@@ -121,7 +121,7 @@ def show_entity_cluster_list(type_, repo):
 @app.route('/events/<repo>/<uri>')
 def show_event_cluster(repo, uri):
     uri = 'http://www.isi.edu/gaia/events/' + uri
-    graph_uri = request.args.get('g')
+    graph_uri = request.args.get('g', default=None)
     show_image = request.args.get('image', default=True)
     show_limit = request.args.get('limit', default=100)
     sparql = SPARQLStore(setting.endpoint + '/' + repo)
