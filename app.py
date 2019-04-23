@@ -216,10 +216,16 @@ def import_clusters():
 def groundtruth(repo):
     graph = request.args.get('g', default=None)
     entity_uri = request.args.get('e', default=None)
-    if entity_uri and gt.has_gt(repo, graph):
-        gt_cluster = gt.search_cluster(repo, graph, entity_uri)
-        return jsonify(gt_cluster)
-    return jsonify(gt.get_all())
+    if entity_uri:
+        if gt.has_gt(repo, graph):
+            print("has gt")
+            gt_cluster = gt.search_cluster(repo, graph, entity_uri)
+            return jsonify(gt_cluster)
+        else:
+            print("no gt")
+            return not_found()
+    else:
+        return jsonify(gt.get_all())
 
 
 @app.route('/cluster/entities/debug/<repo>', methods=['GET'])

@@ -1,6 +1,5 @@
 import sys
-import os
-aif_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'AIDA-Interchange-Format/python/aida_interchange')
-sys.path.append(aif_path)
+# add AIDA-Interchange-Format/python to your PYTHONPATH.
+sys.path.append('../AIDA-Interchange-Format/python/aida_interchange')
 import aifutils
 import aida_rdf_ontologies

@@ -114,13 +114,8 @@ class Model:
 
     def recover_doc_online(self, doc_id):
         import json
-        open_clause = close_clause = ''
-        if self.__graph:
-            open_clause = 'GRAPH <%s> {' % self.__graph
-            close_clause = '}'
         query_label_location = """
         SELECT DISTINCT ?label ?start ?end ?justificationType WHERE {
-            %s
             ?justification a aida:TextJustification ;
                            skos:prefLabel ?label ;
                            aida:source ?source ;
@@ -128,10 +123,9 @@ class Model:
                            aida:endOffsetInclusive ?end ;
                            aida:privateData ?privateData .
             ?privateData aida:system <http://www.rpi.edu> ; aida:jsonContent ?justificationType
-            %s
         }
         ORDER BY ?start 
-        """ % (open_clause, close_clause)
+        """
 
         doc_recover = ''
         lend = 0
@@ -317,7 +311,7 @@ class Cluster:
             if debug.has_debug(self.model.repo, self.model.graph):
                 self._init_debug_info()
             else:
-                return None
+                self.__debug_info = False
         return self.__debug_info
 
     def _init_cluster_prototype(self):
@@ -395,7 +389,13 @@ GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
         member_set = set([str(m.uri) for m in self.members])
         gt_set = set()
         for m in member_set:
-            res = requests.get(groundtruth_url + '?e=' + m)
+            if self.model.graph:
+                res = requests.get(groundtruth_url + '/' + self.model.repo + '?g=' + self.model.graph + '&e=' + m)
+            else:
+                res = requests.get(groundtruth_url + '/' + self.model.repo + '?e=' + m)
+            if res.status_code == 404:
+                self.__groundtruth = False
+                return
             if len(res.json()) > 0:
                 gt_set = set(res.json())
                 break
@@ -421,7 +421,7 @@ GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
         if info:
             self.__debug_info = DebugInfo(info)
         else:
-            self.__debug_info = DebugInfo(None)
+            self.__debug_info = False
 
     def _init_forward_clusters(self):
         query = """
@@ -438,7 +438,7 @@ WHERE {
   %s
 } """ % (self.__open_clause, self.__close_clause)
         for p, o, cnt in self.model.sparql.query(query, namespaces, {'s': self.uri}):
-            self.__forward.add(SuperEdge(self, Cluster(self.model, o), p, int(cnt)))
+            self.__forward.add(SuperEdge(self, Cluster(self.model, o), p, int(float(str(cnt)))))
 
     def _init_backward_clusters(self):
         query = """
@@ -455,7 +455,7 @@ WHERE {
     %s
 } """ % (self.__open_clause, self.__close_clause)
         for s, p, cnt in self.model.sparql.query(query, namespaces, {'o': self.uri}):
-            self.__backward.add(SuperEdge(Cluster(self.model, s), self, p, int(cnt)))
+            self.__backward.add(SuperEdge(Cluster(self.model, s), self, p, int(float(str(cnt)))))
 
     def _query_for_size(self):
         if self.uri in self.model.pickled and 'size' in self.model.pickled[self.uri]:

@@ -98,7 +98,7 @@
                         {% else %}
                             <li id="{{ member.uri }}"><b>{{ member.uri }}</b></li>
                         {% endif %}
-                        {% if cluster.has_debug and str(member.uri) in cluster.debug_info.attractives %}
+                        {% if cluster.debug_info and str(member.uri) in cluster.debug_info.attractives %}
                                 <span class="badge badge-pill badge-primary">attractive</span>
                         {% endif %}
                         <div><b>Labels:</b>
