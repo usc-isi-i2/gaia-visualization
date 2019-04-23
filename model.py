@@ -340,15 +340,16 @@ GROUP BY ?prototype ?type ?category """ % (self.__open_clause, self.__close_clau
 SELECT ?member (MIN(?label) AS ?mlabel) ?type ?target
 WHERE {
     %s
-  ?membership aida:cluster ?cluster ;
-              aida:clusterMember ?member .
-  OPTIONAL { ?member aida:hasName ?label } .
-  OPTIONAL { ?member aida:link/aida:linkTarget ?target } .
-  OPTIONAL {?statement a rdf:Statement ;
-             rdf:subject ?member ;
-             rdf:predicate rdf:type ;
-             rdf:object ?type }.
-     %s
+    ?membership aida:cluster ?cluster ;
+                aida:clusterMember ?member .
+    %s
+    OPTIONAL { ?member aida:hasName ?label } .
+    OPTIONAL { ?member aida:link/aida:linkTarget ?target } .
+    OPTIONAL {?statement a rdf:Statement ;
+              rdf:subject ?member ;
+              rdf:predicate rdf:type ;
+              rdf:object ?type }.
+     
 }
 GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
         for member, label, type_, target in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
@@ -537,13 +538,11 @@ class ClusterMember:
             query = """
                 SELECT ?label (COUNT(?label) AS ?n)
                 WHERE {
-                    %s
                   ?member aida:justifiedBy/skos:prefLabel ?label .
-                    %s
                 }
                 GROUP BY ?label
                 ORDER BY DESC(?n)
-            """ % (self.__open_clause, self.__close_clause)
+            """
             for label, n in self.model.sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
                     label = " ".join(label.split())  # remove double spaces
@@ -552,13 +551,11 @@ class ClusterMember:
             query = """
                 SELECT ?label (COUNT(?label) AS ?n)
                     WHERE {
-                        %s
                       ?member aida:hasName ?label .
-                        %s
                     }
                     GROUP BY ?label
                     ORDER BY DESC(?n)
-                """ % (self.__open_clause, self.__close_clause)
+                """
             for label, n in self.model.sparql.query(query, namespaces, {'member': self.uri}):
                 if label:
                     label = " ".join(label.split())  # remove double spaces
@@ -652,7 +649,6 @@ class ClusterMember:
         query = """
         SELECT ?pred ?obj ?objtype (MIN(?objlbl) AS ?objlabel)
         WHERE {
-            %s
             ?statement rdf:subject ?event ;
                        rdf:predicate ?pred ;
                        rdf:object ?obj .
@@ -660,10 +656,9 @@ class ClusterMember:
                       rdf:predicate rdf:type ;
                       rdf:object ?objtype .
             OPTIONAL { ?obj aida:hasName ?objlbl }
-            %s
         }
         GROUP BY ?pred ?obj ?objtype
-        """ % (self.__open_clause, self.__close_clause)
+        """
         for pred, obj, obj_type, obj_lbl in self.model.sparql.query(query, namespaces, {'event': self.uri}):
             if not obj_lbl:
                 _, obj_lbl = split_uri(obj_type)
@@ -677,7 +672,6 @@ class ClusterMember:
       query = """
       SELECT ?pred ?event ?event_type (MIN(?lbl) AS ?label)
       WHERE {
-            %s
           ?event a aida:Event .
           ?statement rdf:subject ?event ;
                     rdf:predicate ?pred ;
@@ -686,10 +680,9 @@ class ClusterMember:
                     rdf:predicate rdf:type ;
                     rdf:object ?event_type .
           OPTIONAL { ?event aida:justifiedBy/skos:prefLabel ?lbl }
-          %s
       }
       GROUP BY ?pred ?event ?event_type
-      """ % (self.__open_clause, self.__close_clause)
+      """
       for pred, event, event_type, event_lbl in self.model.sparql.query(query, namespaces, {'obj': self.uri}):
           if not event_lbl:
               _, event_lbl = split_uri(event_type)
@@ -709,7 +702,6 @@ class ClusterMember:
         query = """
 SELECT ?label ?type ?target
 WHERE {
-    %s
   OPTIONAL { ?member aida:hasName ?label }
   OPTIONAL { ?member aida:justifiedBy ?justification .
     ?justification skos:prefLabel ?label }
@@ -717,9 +709,8 @@ WHERE {
   ?statement rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
-    %s
 }
-LIMIT 1 """ % (self.__open_clause, self.__close_clause)
+LIMIT 1 """
         for label, type_, target in self.model.sparql.query(query, namespaces, {'member': self.uri}):
             if not label:
                 _, label = split_uri(type_)
@@ -731,14 +722,12 @@ LIMIT 1 """ % (self.__open_clause, self.__close_clause)
         query = """
 SELECT DISTINCT ?source ?start ?end
 WHERE {
-    %s
   ?member aida:justifiedBy ?justification .
   ?justification aida:source ?source ;
                  aida:startOffset ?start ;
                  aida:endOffsetInclusive ?end .
-     %s
 }
-ORDER BY ?start """ % (self.__open_clause, self.__close_clause)
+ORDER BY ?start """
         for source, start, end in self.model.sparql.query(query, namespaces, {'member': self.uri}):
             self.__source = str(source)
             self.__context_pos.append((int(start), int(end)))

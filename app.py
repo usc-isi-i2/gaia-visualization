@@ -38,7 +38,7 @@ def index():
                            repos=repos)
 
 
-@app.route('/<repo>')
+@app.route('/repo/<repo>')
 def hello_world(repo):
     graph_uri = request.args.get('g', '')
     sparql = SPARQLStore(setting.endpoint + '/' + repo)
@@ -129,12 +129,15 @@ def show_event_cluster(repo, uri):
     return show_cluster(model, uri, show_image, show_limit)
 
 
-@app.route('/cluster/AIDA/<path:uri>')
-def show_columbia_cluster(uri):
+@app.route('/cluster/AIDA/<repo>/<path:uri>')
+def show_columbia_cluster(repo, uri):
+    graph_uri = request.args.get('g', default=None)
     uri = 'http://www.columbia.edu/AIDA/' + uri
     show_image = request.args.get('image', default=True)
     show_limit = request.args.get('limit', default=100)
-    return show_cluster(uri, show_image, show_limit)
+    sparql = SPARQLStore(setting.endpoint + '/' + repo)
+    model = Model(sparql, repo, graph_uri)
+    return show_cluster(model, uri, show_image, show_limit)
 
 
 def show_cluster(model: Model, uri, show_image=True, show_limit=100):

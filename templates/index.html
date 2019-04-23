@@ -11,10 +11,10 @@
             <div class="col">
                 <h2>Select Repository</h2>
                 {% for repo, graphs in repos.items() %}
-                <a href="/{{ repo }}">{{ repo }}</a>
+                <a href="/repo/{{ repo }}">{{ repo }}</a>
                 <ul>
                     {% for graph in graphs %}
-                    <li><a href="/{{ repo }}?g={{ graph }}">{{ graph }}</a></li>
+                    <li><a href="/repo/{{ repo }}?g={{ graph }}">{{ graph }}</a></li>
                     {% endfor %}
                 </ul>
                 {% endfor %}
