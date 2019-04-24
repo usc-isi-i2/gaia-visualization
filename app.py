@@ -181,17 +181,27 @@ def show_import():
 def import_clusters():
     repo = request.form['repo']
     graph_uri = request.form['graph_uri']
-    clusters_file = request.files['file']
+    entity_file = request.files['entity_file']
+    event_file = request.files['event_file']
 
-    if repo and graph_uri and clusters_file:
+    if repo and graph_uri and entity_file and event_file:
+
+        # create directory for upload
+        data_dir = setting.store_data + '/' + repo
+        if not os.path.isdir(data_dir):
+            os.makedirs(data_dir)
+
         # upload file
-        filename = clusters_file.filename
-        file = os.path.join(setting.upload_folder, filename)
-        clusters_file.save(file)
+        filename = 'entity-clusters.jl'
+        file = os.path.join(data_dir, filename)
+        entity_file.save(file)
+
+        filename = 'event-clusters.jl'
+        file = os.path.join(data_dir, filename)
+        event_file.save(file)
 
         # to triple store
-        res = clusters_import.create_clusters(setting.import_endpoint, repo, graph_uri, file, "http://www.isi.edu",
-                                              "admin", "gaia@isi")
+        res = clusters_import.create_clusters(setting.endpoint, repo, graph_uri)
 
         if res == 'success':
             return '''
