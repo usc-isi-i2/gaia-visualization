@@ -105,9 +105,12 @@ class Model:
             c = r.memberN
             if isinstance(l, URIRef):
                 _, l = split_uri(l)
-            href = u.replace('http://www.isi.edu/gaia', '/cluster').replace('http://www.columbia.edu', '/cluster')
-            href = href.replace('/entities/', '/entities/' + self.repo + '/')
-            href = href.replace('/events/', '/events/' + self.repo + '/')
+            if 'http://www.isi.edu/gaia' in u:
+                href = u.replace('http://www.isi.edu/gaia', '/cluster')
+                href = href.replace('/entities', '/entities/' + self.repo)
+                href = href.replace('/events', '/events/' + self.repo)
+            else:
+                href = u.replace('http://www.columbia.edu', '/cluster/' + self.repo)
             if self.graph:
                 href = href + '?g=' + self.graph
             yield ClusterSummary(u, href, l, c)

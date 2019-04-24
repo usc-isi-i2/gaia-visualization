@@ -129,7 +129,7 @@ def show_event_cluster(repo, uri):
     return show_cluster(model, uri, show_image, show_limit)
 
 
-@app.route('/cluster/AIDA/<repo>/<path:uri>')
+@app.route('/cluster/<repo>/AIDA/<path:uri>')
 def show_columbia_cluster(repo, uri):
     graph_uri = request.args.get('g', default=None)
     uri = 'http://www.columbia.edu/AIDA/' + uri
