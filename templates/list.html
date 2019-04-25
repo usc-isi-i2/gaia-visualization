@@ -11,7 +11,7 @@
             {% if type_ == "event" %}
                 {% if graph %}
                     <p>Sort by <a href="/list/{{ type_ }}/{{ repo }}?g={{ graph }}&sortby=type">Event Type</a> | <a href="/list/{{ type_ }}/{{ repo }}?g={{ graph }}&sortby=size">Cluster Size</a>
-                {$ else %}
+                {% else %}
                     <p>Sort by <a href="/list/{{ type_ }}/{{ repo }}?sortby=type">Event Type</a> | <a href="/list/{{ type_ }}/{{ repo }}?sortby=size">Cluster Size</a>
                 {% endif %}
             {% endif %}
