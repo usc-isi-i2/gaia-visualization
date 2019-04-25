@@ -34,7 +34,6 @@ class Model:
         if graph:
             pkl_file = pkl_file + '-' + re.sub('[^0-9a-zA-Z]+', '-', graph)
         pkl_file = pkl_file + '.pkl'
-        print(pkl_file)
         if not os.path.isfile(pkl_file):
             tmp.run(sparql, graph, pkl_file, namespaces, AIDA)
             time_person_label.run(sparql, graph, pkl_file, namespaces)
@@ -151,7 +150,7 @@ class Cluster:
         self.__members = []
         self.__forward = None
         self.__backward = None
-        self.__targets = Counter()
+        self.__targets = None
         self.__qnodes = Counter()
         self.__qnodesURL = {}
         self.__groundtruth = None
@@ -213,7 +212,7 @@ class Cluster:
 
     @property
     def targets(self):
-        if not self.__targets:
+        if self.__targets is None:
             self._init_cluster_members()
         return self.__targets.most_common()
 
@@ -339,6 +338,7 @@ GROUP BY ?prototype ?type ?category """ % (self.__open_clause, self.__close_clau
             self.__type = cate
 
     def _init_cluster_members(self):
+        self.__targets = Counter()
         query = """
 SELECT ?member (MIN(?label) AS ?mlabel) ?type ?target
 WHERE {
