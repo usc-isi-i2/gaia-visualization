@@ -74,6 +74,7 @@ class Model:
         label_string
         ?membership aida:cluster ?cluster ;
                   aida:clusterMember ?member .
+        MINUS {?cluster aida:prototype ?member}
         %s
     }
     GROUP BY ?cluster ?label
@@ -345,6 +346,7 @@ WHERE {
     %s
     ?membership aida:cluster ?cluster ;
                 aida:clusterMember ?member .
+    MINUS {?cluster aida:prototype ?member}
     %s
     OPTIONAL { ?member aida:hasName ?label } .
     OPTIONAL { ?member aida:link/aida:linkTarget ?target } .
@@ -470,6 +472,7 @@ WHERE {
     %s
     ?membership aida:cluster ?cluster ;
                 aida:clusterMember ?member .
+    MINUS {?cluster aida:prototype ?member}
     %s
 }  """ % (self.__open_clause, self.__close_clause)
         for size, in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
@@ -696,7 +699,7 @@ class ClusterMember:
     @property
     def cluster(self):
         if self.__cluster is None:
-            query = "SELECT ?cluster WHERE { %s ?membership aida:cluster ?cluster ; aida:clusterMember ?member . %s}" % (self.__open_clause, self.__close_clause)
+            query = "SELECT ?cluster WHERE { %s ?membership aida:cluster ?cluster ; aida:clusterMember ?member . MINUS {?cluster aida:prototype ?member} %s}" % (self.__open_clause, self.__close_clause)
             for cluster, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
                 self.__cluster = self.model.get_cluster(cluster)
         return self.__cluster
