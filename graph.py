@@ -7,7 +7,7 @@ import pickle
 
 SVG = 'SVG'
 PNG = 'PNG'
-clusters = pickle.load(open('cluster.pkl', 'rb'))
+# clusters = pickle.load(open('cluster.pkl', 'rb'))
 
 
 class Graph:
@@ -191,7 +191,7 @@ class SuperEdgeBasedGraph(ClusterGraph):
     @staticmethod
     def _cluster_node_from_pickle(model, uri):
         try:
-            c = clusters[str(uri)]
+            c = model.pickled[str(uri)] #clusters[str(uri)]
             if c['type'] != AIDA.Relation:
                 return ClusterNode(uri, c['size'], c['label'], type_=c['type'])
             else:
