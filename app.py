@@ -4,6 +4,7 @@ from flask import Flask, render_template, abort, request, jsonify
 from model import Model, types
 # from setting import repo, port, repositories, upload_folder, import_endpoint
 import setting
+from setting import url_prefix
 import groundtruth as gt
 import debug
 from importer import clusters_import
@@ -35,6 +36,7 @@ def index():
         for r in result:
             repos[repo].append(r['contextID']['value'])
     return render_template('index.html',
+                           url_prefix=url_prefix,
                            repos=repos)
 
 
@@ -44,6 +46,7 @@ def hello_world(repo):
     sparql = SPARQLStore(setting.endpoint + '/' + repo)
     model = Model(sparql, repo, graph_uri)
     return render_template('clusters.html',
+                           url_prefix=url_prefix,
                            repo=repo,
                            graph=graph_uri,
                            entities=model.get_cluster_list(types.Entity),
@@ -67,17 +70,20 @@ def static_css(path):
 
 @app.route('/viz/<name>')
 def show_bidirection_viz(name):
-    return render_template('viz.html', name=name)
+    return render_template('viz.html', url_prefix=url_prefix, name=name)
 
 
 @app.route('/sviz/<name>')
 def show_viz(name):
-    return render_template('sviz.html', name=name)
+    return render_template('sviz.html', url_prefix=url_prefix, name=name)
 
 
 @app.route('/cluster/entities/<repo>/<uri>')
 @app.route('/entities/<repo>/<uri>')
 def show_entity_cluster(repo, uri):
+    i = uri.find('?')
+    if i > 0:
+        uri = uri[:i]
     uri = 'http://www.isi.edu/gaia/entities/' + uri
     graph_uri = request.args.get('g', default=None)
     show_image = request.args.get('image', default=True)
@@ -97,6 +103,7 @@ def show_entity_cluster_list(type_, repo):
     model = Model(sparql, repo, graph_uri)
     if type_ == 'entity':
         return render_template('list.html',
+                               url_prefix=url_prefix,
                                type_='entity',
                                repo=repo,
                                graph=graph_uri,
@@ -106,6 +113,7 @@ def show_entity_cluster_list(type_, repo):
                                clusters=model.get_cluster_list(types.Entity, limit, offset, sortby))
     elif type_ == 'event':
         return render_template('list.html',
+                               url_prefix=url_prefix,
                                type_='event',
                                repo=repo,
                                graph=graph_uri,
@@ -147,19 +155,26 @@ def show_cluster(model: Model, uri, show_image=True, show_limit=100):
             isinstance(show_limit, int) and show_limit) or (show_limit.isdigit() and int(show_limit))
     if not cluster:
         abort(404)
-    return render_template('cluster.html', repo=model.repo, graph=model.graph, cluster=cluster, show_image=show_image, show_limit=show_limit)
+    print(cluster.href)
+    return render_template('cluster.html',
+                           url_prefix=url_prefix,
+                           repo=model.repo,
+                           graph=model.graph,
+                           cluster=cluster,
+                           show_image=show_image,
+                           show_limit=show_limit)
 
 
 @app.route('/report')
 def show_report():
     update = request.args.get('update', default=False, type=bool)
     report = Report(update)
-    return render_template('report.html', report=report)
+    return render_template('report.html', url_prefix=url_prefix, report=report)
 
 
 @app.route('/doc/<doc_id>')
 def show_doc_pronoun(doc_id):
-    return render_template('doc.html', doc_id=doc_id, content=recover_doc_online(doc_id))
+    return render_template('doc.html', url_prefix=url_prefix, doc_id=doc_id, content=recover_doc_online(doc_id))
 
 
 @app.route('/cluster/entities/gt/<repo>')
@@ -169,12 +184,12 @@ def show_entity_gt(repo):
     sparql = SPARQLStore(setting.endpoint + '/' + repo)
     model = Model(sparql, repo, graph_uri)
     cluster = model.get_cluster(uri)
-    return render_template('groundtruth.html', repo=repo, graph=graph_uri, cluster=cluster)
+    return render_template('groundtruth.html', url_prefix=url_prefix, repo=repo, graph=graph_uri, cluster=cluster)
 
 
 @app.route('/cluster/import')
 def show_import():
-    return render_template('importer.html', repos=setting.repositories)
+    return render_template('importer.html', url_prefix=url_prefix, repos=setting.repositories)
 
 
 @app.route('/import', methods=['POST'])

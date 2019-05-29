@@ -19,13 +19,13 @@
                     <h2>Entities</h2>
                     <ul>
                         {% for cluster in entities %}
-                            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+                            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ url_prefix }}{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
                         {% endfor %}
                     </ul>
                     {% if graph %}
-                        <a href="/list/entity/{{ repo }}?g={{ graph }}">Show more...</a>
+                        <a href="{{ url_prefix }}/list/entity/{{ repo }}?g={{ graph }}">Show more...</a>
                     {% else %}
-                        <a href="/list/entity/{{ repo }}">Show more...</a>
+                        <a href="{{ url_prefix }}/list/entity/{{ repo }}">Show more...</a>
                     {% endif %}
                 {% endif %}
             </div>
@@ -37,13 +37,13 @@
                     <h2>Events</h2>
                     <ul>
                         {% for cluster in events %}
-                            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+                            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ url_prefix }}{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
                         {% endfor %}
                     </ul>
                     {% if graph %}
-                        <a href="/list/event/{{ repo }}?g={{ graph }}">Show more...</a>
+                        <a href="{{ url_prefix }}/list/event/{{ repo }}?g={{ graph }}">Show more...</a>
                     {% else %}
-                        <a href="/list/event/{{ repo }}">Show more...</a>
+                        <a href="{{ url_prefix }}/list/event/{{ repo }}">Show more...</a>
                     {% endif %}
                 {% endif %}
             </div>

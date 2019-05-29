@@ -45,7 +45,7 @@
                                                         <li><b>{{ pred }}</b>:
                                                             {{ obj.label }}
                                                             ({{ obj.type_text }} in cluster
-                                                            <a href="{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
+                                                            <a href="{{ url_prefix }}{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -56,7 +56,7 @@
                                                     <li><b>{{ pred }}</b>:
                                                         {{ event.label }}
                                                         ({{ event.type_text }} in cluster
-                                                        <a href="{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
+                                                        <a href="{{ url_prefix }}{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -111,7 +111,7 @@
                                                         <li><b>{{ pred }}</b>:
                                                             {{ obj.label }}
                                                             ({{ obj.type_text }} in cluster
-                                                            <a href="{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
+                                                            <a href="{{ url_prefix }}{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -122,7 +122,7 @@
                                                     <li><b>{{ pred }}</b>:
                                                         {{ event.label }}
                                                         ({{ event.type_text }} in cluster
-                                                        <a href="{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
+                                                        <a href="{{ url_prefix }}{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
                                                     {% endfor %}
                                                 </ul>
                                             </div>
@@ -165,7 +165,7 @@
                             <div class="card-body">
                                 <ul>
                                 {% for m, c in cluster.groundtruth.missing.items() %}
-                                    <li><a href="{{ c }}#{{ m }}" target="_blank">{{ m }}</a></li>
+                                    <li><a href="{{ url_prefix }}{{ c }}#{{ m }}" target="_blank">{{ m }}</a></li>
                                 {% endfor %}
                                 </ul>
                             </div>

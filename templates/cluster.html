@@ -41,7 +41,7 @@
                         {% endfor %}
                         </ul>
                         {% if target_limit and cluster.targetsSize > target_limit %}
-                            <a href="{{ cluster.href }}?image={{ show_image }}&limit={{ show_limit }}&targetLimit=false">Show all targets</a>
+                            <a href="{{ url_prefix }}{{ cluster.href }}?image={{ show_image }}&limit={{ show_limit }}&targetLimit=false">Show all targets</a>
                         {% endif %}
                     </div>
                     <div>
@@ -56,9 +56,9 @@
                         <div><b>Groundtruth:</b>
                         {% if cluster.groundtruth %}
                             {% if graph %}
-                            <a href="/cluster/entities/gt/{{ repo }}?g={{ graph }}&e={{ cluster.uri }}" target="_blank">Details</a>
+                            <a href="{{ url_prefix }}/cluster/entities/gt/{{ repo }}?g={{ graph }}&e={{ cluster.uri }}" target="_blank">Details</a>
                             {% else %}
-                            <a href="/cluster/entities/gt/{{ repo }}?e={{ cluster.uri }}" target="_blank">Details</a>
+                            <a href="{{ url_prefix }}/cluster/entities/gt/{{ repo }}?e={{ cluster.uri }}" target="_blank">Details</a>
                             {% endif %}
                             <ul>
                                 <li>Hit: {{ cluster.groundtruth.hit_count }}</li>
@@ -76,8 +76,8 @@
             <div class="col">
                 {% if show_image %}
                 <div>
-                    <a href="/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
-                    <iframe src="/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
+                    <a href="{{ url_prefix }}/viz/{{ cluster.img }}"> Open Graph in a Tab </a>
+                    <iframe src="{{ url_prefix }}/viz/{{ cluster.img }}" height="500px" width="100%"></iframe>
                 </div>
                 {% endif %}
             </div>
@@ -114,7 +114,7 @@
                                         <li><b>{{ pred }}</b>:
                                             {{ obj.label }}
                                             ({{ obj.type_text }} in cluster
-                                            <a href="{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
+                                            <a href="{{ url_prefix }}{{ obj.cluster.href }}">{{ obj.cluster.label }}</a>)</li>
                                     {% endfor %}
                                 </ul>
                             </div>
@@ -125,7 +125,7 @@
                                     <li><b>{{ pred }}</b>:
                                         {{ event.label }}
                                         ({{ event.type_text }} in cluster
-                                        <a href="{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
+                                        <a href="{{ url_prefix }}{{ event.cluster.href }}">{{ event.cluster.label }}</a>)</li>
                                     {% endfor %}
                                 </ul>
                             </div>
@@ -165,7 +165,11 @@
                 {% endfor %}
                 </ol>
                 {% if show_limit and cluster.size > show_limit %}
-                    <a href="{{ cluster.href }}?image=false&limit=false&targetLimit=false">Show all members</a>
+                    {% if graph %}
+                    <a href="{{ url_prefix }}{{ cluster.href }}&image=false&limit=false&targetLimit=false">Show all members</a>
+                    {% else %}
+                    <a href="{{ url_prefix }}{{ cluster.href }}?image=false&limit=false&targetLimit=false">Show all members</a>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -178,7 +182,7 @@
                     {% else %}
                         <ul>
                         {% for m, c in cluster.groundtruth.missing.items() %}
-                            <li><a href="{{ c }}#{{ m }}" target="_blank">{{ m }}</a></li>
+                            <li><a href="{{ url_prefix }}{{ c }}#{{ m }}" target="_blank">{{ m }}</a></li>
                         {% endfor %}
                         </ul>
                     {% endif %}

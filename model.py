@@ -168,7 +168,7 @@ class Cluster:
     def href(self):
         res = self.uri.replace('http://www.isi.edu/gaia', '/cluster').replace('http://www.columbia.edu', '/cluster')
         res = res.replace('/entities/', '/entities/' + self.model.repo + '/')
-        res = res.replace('/events/', '/events/' + self.repo + '/')
+        res = res.replace('/events/', '/events/' + self.model.repo + '/')
         if self.model.graph:
             res = res + '?g=' + self.model.graph
         return res
