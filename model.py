@@ -152,8 +152,9 @@ class Cluster:
         self.__forward = None
         self.__backward = None
         self.__targets = None
-        self.__qnodes = Counter()
-        self.__qnodesURL = {}
+        self.__freebases = None
+        self.__qids = Counter()
+        self.__q_urls = {}
         self.__groundtruth = None
         self.__debug_info = None
         self.__all_labels = None
@@ -218,20 +219,26 @@ class Cluster:
         return self.__targets.most_common()
 
     @property
+    def freebases(self):
+        if self.__freebases is None:
+            self._init_cluster_members()
+        return self.__freebases.most_common()
+
+    @property
     def targetsSize(self):
         return len(self.targets)
 
     @property
-    def qnodes(self):
-        if not self.__qnodes:
+    def qids(self):
+        if not self.__qids:
             self._init_qnodes()
-        return self.__qnodes.most_common()
+        return self.__qids.most_common()
 
     @property
-    def qnodesURL(self):
-        if not self.__qnodesURL:
+    def q_urls(self):
+        if not self.__q_urls:
             self._init_qnodes()
-        return self.__qnodesURL
+        return self.__q_urls
 
     @property
     def size(self):
@@ -340,8 +347,9 @@ GROUP BY ?prototype ?type ?category """ % (self.__open_clause, self.__close_clau
 
     def _init_cluster_members(self):
         self.__targets = Counter()
+        self.__freebases = Counter()
         query = """
-SELECT ?member (MIN(?label) AS ?mlabel) ?type ?target
+SELECT ?member (MIN(?label) AS ?mlabel) ?type
 WHERE {
     %s
     ?membership aida:cluster ?cluster ;
@@ -349,23 +357,25 @@ WHERE {
     MINUS {?cluster aida:prototype ?member}
     %s
     OPTIONAL { ?member aida:hasName ?label } .
-    OPTIONAL { ?member aida:link/aida:linkTarget ?target } .
     OPTIONAL {?statement a rdf:Statement ;
               rdf:subject ?member ;
               rdf:predicate rdf:type ;
               rdf:object ?type }.
      
 }
-GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
-        for member, label, type_, target in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
-            self.__members.append(ClusterMember(self.model, member, label, type_, target))
-            if target:
-                self.__targets[str(target)] += 1
+GROUP BY ?member ?type """ % (self.__open_clause, self.__close_clause)
+        for member, label, type_ in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
+            m = ClusterMember(self.model, member, label, type_)
+            self.__members.append(m)
+            for target in m.targets:
+                self.__targets[target] += 1
+            for freebase in m.freebases:
+                self.__freebases[freebase] += 1
 
     def _init_qnodes(self):
-        for target, count in self.targets:
-            if ":NIL" not in target:
-                fbid = '/' + target[target.find(':')+1:].replace('.', '/')
+        for fbid, count in self.freebases:
+            if ":NIL" not in fbid:
+                fbid = '/' + fbid[fbid.find(':')+1:].replace('.', '/')
                 query = """
                     SELECT ?qid ?label WHERE {
                       ?qid wdt:P646 ?freebase .  
@@ -376,9 +386,9 @@ GROUP BY ?member ?type ?target """ % (self.__open_clause, self.__close_clause)
                 for qid, label in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
                     qnodeURL = str(qid)
                     qid = qnodeURL.rsplit('/', 1)[1]
-                    self.__qnodes[qid] = count
-                    if qid not in self.__qnodesURL:
-                        self.__qnodesURL[qid] = qnodeURL
+                    self.__qids[qid] = count
+                    if qid not in self.__q_urls:
+                        self.__q_urls[qid] = qnodeURL
 
     def _init_groundtruth(self):
         # query to find cluster of the missing member
@@ -502,18 +512,19 @@ class SuperEdge:
 
 
 class ClusterMember:
-    def __init__(self, model, uri, label=None, type_=None, target=None):
+    def __init__(self, model, uri, label=None, type_=None):
         self.model = model
         self.uri = URIRef(uri)
         self.__id = None
         self.__label = label
         self.__all_labels = None
         self.__type = type_
-        self.__target = target
-        self.__qid = None
-        self.__qLabel = None
-        self.__qAliases = None
-        self.__qURL = None
+        self.__targets = None
+        self.__freebases = None
+        self.__qids = None
+        self.__q_labels = None
+        self.__q_aliases = None
+        self.__q_urls = None
         self.__source = None
         self.__context_pos = []
         self.__context_extractor = None
@@ -584,65 +595,74 @@ class ClusterMember:
         return text
 
     @property
-    def target(self):
-        if self.__target is None:
+    def targets(self):
+        if self.__targets is None:
             self._init_member()
-        return self.__target
+        return self.__targets
 
     @property
-    def qid(self):
-        if self.__qid is None and self.target:
-            self._init_qNode()
-        return self.__qid
+    def freebases(self):
+        if self.__freebases is None:
+            self._init_member()
+        return self.__freebases
 
     @property
-    def qURL(self):
-        if self.__qid is None and self.target:
-            self._init_qNode()
-        return self.__qURL
+    def qids(self):
+        if self.__qids is None and self.freebases:
+            self._init_qnode()
+        return self.__qids
 
     @property
-    def qLabel(self):
-        if self.__qLabel is None and self.target:
-            self._init_qNode()
-        return self.__qLabel
+    def q_urls(self):
+        if self.__qids is None and self.freebases:
+            self._init_qnode()
+        return self.__q_urls
 
     @property
-    def qAliases(self):
-        if self.__qAliases is None and self.target:
-            self._init_qNode()
-        return self.__qAliases
+    def q_labels(self):
+        if self.__q_labels is None and self.freebases:
+            self._init_qnode()
+        return self.__q_labels
 
-    def _init_qNode(self):
-        target = self.target
-        self.__qid = False
-        self.__qLabel = False
-        self.__qAliases = False
+    @property
+    def q_aliases(self):
+        if self.__q_aliases is None and self.freebases:
+            self._init_qnode()
+        return self.__q_aliases
 
-        if target and ":NIL" not in target:
-            fbid = '/' + target[target.find(':')+1:].replace('.', '/')
-            query = """
-                SELECT ?qid ?label WHERE {
-                  ?qid wdt:P646 ?freebase .
-                  ?qid rdfs:label ?label filter (lang(?label) = "en") .
-                }
-                LIMIT 1
-            """
-            for qid, label in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
-                self.__qURL = str(qid)
-                self.__qid = self.__qURL.rsplit('/', 1)[1]
-                self.__qLabel = label
+    def _init_qnode(self):
+        self.__qids = []
+        self.__q_urls = {}
+        self.__q_labels = {}
+        self.__q_aliases = {}
 
-            query = """
-                SELECT ?qid ?alias WHERE {
-                  ?qid wdt:P646 ?freebase .
-                  ?qid skos:altLabel ?alias filter (lang(?alias) = "en") .
-                }
-            """
-            aliases = []
-            for qid, alias in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
-                aliases.append(str(alias))
-            self.__qAliases = ', '.join(aliases)
+        for fbid in self.freebases:
+            if ":NIL" not in fbid:
+                fbid = '/' + fbid[fbid.find(':')+1:].replace('.', '/')
+                query = """
+                    SELECT ?qid ?label WHERE {
+                      ?qid wdt:P646 ?freebase .
+                      ?qid rdfs:label ?label filter (lang(?label) = "en") .
+                    }
+                    LIMIT 1
+                """
+                for q_url, label in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
+                    qid = str(q_url).rsplit('/', 1)[1]
+                    self.__qids.append(qid)
+                    self.__q_urls[qid] = str(q_url)
+                    self.__q_labels[qid] = str(label)
+
+                query = """
+                    SELECT ?qid ?alias WHERE {
+                      ?qid wdt:P646 ?freebase .
+                      ?qid skos:altLabel ?alias filter (lang(?alias) = "en") .
+                    }
+                """
+                aliases = []
+                for q_url, alias in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
+                    qid = str(q_url).rsplit('/', 1)[1]
+                    aliases.append(str(alias))
+                self.__q_aliases[qid] = ', '.join(aliases)
 
     @property
     def context_extractor(self):
@@ -706,23 +726,50 @@ class ClusterMember:
 
     def _init_member(self):
         query = """
-SELECT ?label ?type ?target
+SELECT ?label ?type
 WHERE {
   OPTIONAL { ?member aida:hasName ?label }
   OPTIONAL { ?member aida:justifiedBy ?justification .
     ?justification skos:prefLabel ?label }
-  OPTIONAL { ?obj aida:link/aida:linkTarget ?target }
   ?statement rdf:subject ?member ;
              rdf:predicate rdf:type ;
              rdf:object ?type .
 }
 LIMIT 1 """
-        for label, type_, target in self.model.sparql.query(query, namespaces, {'member': self.uri}):
+        for label, type_ in self.model.sparql.query(query, namespaces, {'member': self.uri}):
             if not label:
                 _, label = split_uri(type_)
             self.__label = label
             self.__type = type_
-            self.__target = target if target else False
+
+        query = """
+SELECT ?target
+WHERE {
+  ?member aida:link/aida:linkTarget ?target 
+} """
+        self.__targets = set([])
+        for target, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
+            self.__targets.add(str(target))
+
+        query = """
+        SELECT DISTINCT ?fbid {
+            ?member ^rdf:subject/aida:justifiedBy/aida:privateData [
+                aida:jsonContent ?fbid ;
+                aida:system <http://www.rpi.edu/EDL_Freebase>
+            ]
+        } """
+        # query = """ # this is new
+        # SELECT DISTINCT ?fbid {
+        #    ?member aida:privateData [
+        #         aida:jsonContent ?fbid ;
+        #         aida:system <http://www.rpi.edu/EDL_Freebase>
+        #     ]
+        # }
+        # """
+        self.__freebases = set([])
+        for j_fbid, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
+            fbid = json.loads(j_fbid).get('freebase_link')
+            self.__freebases.add(fbid)
 
     def _init_source(self):
         query = """
