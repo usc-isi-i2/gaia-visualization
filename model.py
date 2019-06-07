@@ -375,7 +375,7 @@ GROUP BY ?member ?type """ % (self.__open_clause, self.__close_clause)
     def _init_qnodes(self):
         for fbid, count in self.freebases:
             if ":NIL" not in fbid:
-                fbid = '/' + fbid[fbid.find(':')+1:].replace('.', '/')
+                fbid = '/' + fbid.replace('.', '/')
                 query = """
                     SELECT ?qid ?label WHERE {
                       ?qid wdt:P646 ?freebase .  
@@ -752,25 +752,26 @@ WHERE {
         for target, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
             self.__targets.add(str(target))
 
+        # query = """
+        #  SELECT DISTINCT ?fbid {
+        #      ?member ^rdf:subject/aida:justifiedBy/aida:privateData [
+        #          aida:jsonContent ?fbid ;
+        #          aida:system <http://www.rpi.edu/EDL_Freebase>
+        #      ]
+        #  } """
         query = """
         SELECT DISTINCT ?fbid {
-            ?member ^rdf:subject/aida:justifiedBy/aida:privateData [
+           ?member aida:privateData [
                 aida:jsonContent ?fbid ;
                 aida:system <http://www.rpi.edu/EDL_Freebase>
             ]
-        } """
-        # query = """ # this is new
-        # SELECT DISTINCT ?fbid {
-        #    ?member aida:privateData [
-        #         aida:jsonContent ?fbid ;
-        #         aida:system <http://www.rpi.edu/EDL_Freebase>
-        #     ]
-        # }
-        # """
+        }
+        """
         self.__freebases = set([])
         for j_fbid, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
-            fbid = json.loads(j_fbid).get('freebase_link')
-            self.__freebases.add(fbid)
+            fbids = json.loads(j_fbid).get('freebase_link').keys()
+            for fbid in fbids:
+                self.__freebases.add(fbid)
 
     def _init_source(self):
         query = """
