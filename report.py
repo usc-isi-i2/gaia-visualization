@@ -107,7 +107,7 @@ class Report:
         '''.replace('?type', type_).replace('filter', filter_)
         d = {}
         for cate, count in sparql.query(query, namespaces):
-            cate = cate.replace('https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/SeedlingOntology#', '')
+            cate = cate.replace('https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/SeedlingOntology#', '')
             d[cate] = int(count)
         return d
 
@@ -166,7 +166,7 @@ class Report:
     @property
     def num_of_self_connect_entity(self):
         query = '''
-        PREFIX aida: <https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#>
+        PREFIX aida: <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
         SELECT ?relation ?entity

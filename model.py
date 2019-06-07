@@ -14,7 +14,7 @@ import time_person_label
 import re
 
 wikidata_sparql = SPARQLStore(wikidata_endpoint)
-AIDA = Namespace('https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#')
+AIDA = Namespace('https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#')
 WDT = Namespace('http://www.wikidata.org/prop/direct/')
 namespaces = {
     'aida': AIDA,
@@ -659,6 +659,7 @@ class ClusterMember:
                     }
                 """
                 aliases = []
+                qid = None
                 for q_url, alias in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
                     qid = str(q_url).rsplit('/', 1)[1]
                     aliases.append(str(alias))

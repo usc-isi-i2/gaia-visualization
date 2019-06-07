@@ -30,7 +30,7 @@ def run(sparql, graph, file_path, namespaces):
 
     def query_justification_label_for_cluster_by_type(typ, prefix=''):
         for uri, cluster in pickled.items():
-            if cluster['label'] == typ and cluster['type'] == 'https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/SeedlingOntology#' + typ:
+            if cluster['label'] == typ and cluster['type'] == 'https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/SeedlingOntology#' + typ:
                 label = query_justification_lbl(uri)
                 if label:
                     cluster['label'] = prefix + label
