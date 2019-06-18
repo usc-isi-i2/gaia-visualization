@@ -152,6 +152,7 @@ class Cluster:
         self.__forward = None
         self.__backward = None
         self.__targets = None
+        self.__target_wiki = None
         self.__freebases = None
         self.__qids = Counter()
         self.__q_urls = {}
@@ -217,6 +218,12 @@ class Cluster:
         if self.__targets is None:
             self._init_cluster_members()
         return self.__targets.most_common()
+
+    @property
+    def target_wiki(self):
+        if self.__target_wiki is None:
+            self._init_cluster_members()
+        return self.__target_wiki
 
     @property
     def freebases(self):
@@ -347,6 +354,7 @@ GROUP BY ?prototype ?type ?category """ % (self.__open_clause, self.__close_clau
 
     def _init_cluster_members(self):
         self.__targets = Counter()
+        self.__target_wiki = {}
         self.__freebases = Counter()
         query = """
 SELECT ?member (MIN(?label) AS ?mlabel) ?type
@@ -371,6 +379,23 @@ GROUP BY ?member ?type """ % (self.__open_clause, self.__close_clause)
                 self.__targets[target] += 1
             for freebase in m.freebases:
                 self.__freebases[freebase] += 1
+
+        query = '''
+SELECT ?qnode ?qnodeLabel 
+WHERE 
+{
+    ?qnode wdt:P1566 ?target .
+    SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". }
+} '''
+        for target in self.__targets.keys():
+            target_t = target[target.index(':')+1:]
+            for qnode, qnodeLabel in wikidata_sparql.query(query, namespaces, {'target': Literal(target_t)}):
+                url = str(qnode)
+                qnode = url[url.rfind('/')+1:]
+                self.__target_wiki[target] = {}
+                self.__target_wiki[target]['qnode'] = qnode
+                self.__target_wiki[target]['url'] = url
+                self.__target_wiki[target]['label'] = str(qnodeLabel)
 
     def _init_qnodes(self):
         for fbid, count in self.freebases:

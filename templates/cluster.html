@@ -37,7 +37,11 @@
                         <b>Targets:</b>
                         <ul>
                         {% for target, count in cluster.targets %}
-                          <li>{{ target }} ({{ count }})</li>
+                            {% if target in cluster.target_wiki %}
+                            <li>{{ target }} ({{ count }}): <a href="{{ cluster.target_wiki[target].url }}">{{ cluster.target_wiki[target].qnode }}</a> ({{ cluster.target_wiki[target].label }})</li>
+                            {% else %}
+                            <li>{{ target }} ({{ count }})</li>
+                            {% endif %}
                         {% endfor %}
                         </ul>
                         {% if target_limit and cluster.targetsSize > target_limit %}
