@@ -152,9 +152,11 @@ class Cluster:
         self.__forward = None
         self.__backward = None
         self.__targets = None
+        self.__selected_targets = None
         self.__target_wiki = None
         self.__freebases = None
         self.__qids = Counter()
+        self.__selected_qnodes = None
         self.__q_urls = {}
         self.__groundtruth = None
         self.__debug_info = None
@@ -220,6 +222,15 @@ class Cluster:
         return self.__targets.most_common()
 
     @property
+    def selected_targets(self):
+        if self.__selected_targets is None:
+            self.__selected_targets = self.debug_info.selected_targets
+        return self.__selected_targets
+
+    def get_target_stats(self, target):
+        return self.debug_info.target_statistics[target]
+
+    @property
     def target_wiki(self):
         if self.__target_wiki is None:
             self._init_cluster_members()
@@ -240,6 +251,18 @@ class Cluster:
         if not self.__qids:
             self._init_qnodes()
         return self.__qids.most_common()
+
+    @property
+    def selected_qnodes(self):
+        if not self.__selected_qnodes:
+            self.__selected_qnodes = self.debug_info.selected_qnodes
+        return self.__selected_qnodes
+
+    def get_qnode_stats(self, qurl):
+        if qurl in self.debug_info.qnode_statistics:
+            return self.debug_info.qnode_statistics[qurl]
+        else:
+            return None
 
     @property
     def q_urls(self):
@@ -373,11 +396,15 @@ WHERE {
 }
 GROUP BY ?member ?type """ % (self.__open_clause, self.__close_clause)
         for member, label, type_ in self.model.sparql.query(query, namespaces, {'cluster': self.uri}):
-            m = ClusterMember(self.model, member, label, type_)
+            m = ClusterMember(model=self.model,
+                              uri=str(member),
+                              label=label,
+                              type_=type_,
+                              debug_info=self.debug_info.members[str(member)]['raw_object'])
             self.__members.append(m)
-            for target in m.targets:
+            for target in m.targets.keys():
                 self.__targets[target] += 1
-            for freebase in m.freebases:
+            for freebase in m.freebases.keys():
                 self.__freebases[freebase] += 1
 
         query = '''
@@ -537,7 +564,7 @@ class SuperEdge:
 
 
 class ClusterMember:
-    def __init__(self, model, uri, label=None, type_=None):
+    def __init__(self, model, uri, label=None, type_=None, debug_info=None):
         self.model = model
         self.uri = URIRef(uri)
         self.__id = None
@@ -554,6 +581,7 @@ class ClusterMember:
         self.__context_pos = []
         self.__context_extractor = None
         self.__cluster: Cluster = None
+        self.__debug_info = debug_info
 
         if model.graph:
             self.__open_clause = 'GRAPH <%s> {' % self.model.graph
@@ -656,12 +684,12 @@ class ClusterMember:
         return self.__q_aliases
 
     def _init_qnode(self):
-        self.__qids = []
+        self.__qids = {}  # qid to score
         self.__q_urls = {}
         self.__q_labels = {}
         self.__q_aliases = {}
 
-        for fbid in self.freebases:
+        for fbid, score in self.freebases.items():
             if ":NIL" not in fbid:
                 fbid = '/' + fbid[fbid.find(':')+1:].replace('.', '/')
                 query = """
@@ -673,7 +701,7 @@ class ClusterMember:
                 """
                 for q_url, label in wikidata_sparql.query(query, namespaces, {'freebase': Literal(fbid)}):
                     qid = str(q_url).rsplit('/', 1)[1]
-                    self.__qids.append(qid)
+                    self.__qids[qid] = score
                     self.__q_urls[qid] = str(q_url)
                     self.__q_labels[qid] = str(label)
 
@@ -768,35 +796,43 @@ LIMIT 1 """
             self.__label = label
             self.__type = type_
 
-        query = """
-SELECT ?target
-WHERE {
-  ?member aida:link/aida:linkTarget ?target 
-} """
-        self.__targets = set([])
-        for target, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
-            self.__targets.add(str(target))
+        self.__targets = {}
+        if self.__debug_info:
+            if self.__debug_info['targets']:
+                for i in range(0, len(self.__debug_info['targets'])):
+                    target = self.__debug_info['targets'][i]
+                    score = self.__debug_info['target_scores'][i]
+                    self.__targets[target] = score
+        else:
+            query = """
+                SELECT ?target
+                WHERE {
+                  ?member aida:link/aida:linkTarget ?target 
+                } """
+            for target, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
+                self.__targets[str(target)] = 0
 
-        # query = """
-        #  SELECT DISTINCT ?fbid {
-        #      ?member ^rdf:subject/aida:justifiedBy/aida:privateData [
-        #          aida:jsonContent ?fbid ;
-        #          aida:system <http://www.rpi.edu/EDL_Freebase>
-        #      ]
-        #  } """
-        query = """
-        SELECT DISTINCT ?fbid {
-           ?member aida:privateData [
-                aida:jsonContent ?fbid ;
-                aida:system <http://www.rpi.edu/EDL_Freebase>
-            ]
-        }
-        """
-        self.__freebases = set([])
-        for j_fbid, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
-            fbids = json.loads(j_fbid).get('freebase_link').keys()
-            for fbid in fbids:
-                self.__freebases.add(fbid)
+        self.__freebases = {}
+        if self.__debug_info:
+            if self.__debug_info['fbid']:
+                for i in range(0, len(self.__debug_info['fbid'])):
+                    fbid = self.__debug_info['fbid'][i]
+                    score = self.__debug_info['fbid_score_avg'][i]
+                    self.__freebases[fbid] = score
+        else:
+            query = """
+                SELECT DISTINCT ?fbid {
+                   ?member aida:privateData [
+                        aida:jsonContent ?fbid ;
+                        aida:system <http://www.rpi.edu/EDL_Freebase>
+                    ]
+                }
+            """
+
+            for j_fbid, in self.model.sparql.query(query, namespaces, {'member': self.uri}):
+                fbids = json.loads(j_fbid).get('freebase_link').keys()
+                for fbid in fbids:
+                    self.__freebases[fbid] = 0
 
     def _init_source(self):
         query = """
@@ -893,4 +929,20 @@ class DebugInfo:
     @property
     def type(self):
         return self.__info['type']
+
+    @property
+    def selected_targets(self):
+        return self.__info['kb_id']  # list of targets
+
+    @property
+    def selected_qnodes(self):
+        return self.__info['wd_id']  # list of qnodes
+
+    @property
+    def target_statistics(self):
+        return self.__info['kb_statistics']
+
+    @property
+    def qnode_statistics(self):
+        return self.__info['wd_statistics']
 

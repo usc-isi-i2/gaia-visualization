@@ -16,6 +16,7 @@ import time_person_label
 
 app = Flask(__name__, static_folder='static')
 app.jinja_env.globals.update(str=str)  # allow str function to be used in template
+app.jinja_env.globals.update(round=round)  # allow round function to be used in template
 app.config['JSON_AS_ASCII'] = True
 
 

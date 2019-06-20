@@ -34,13 +34,45 @@
                     </div>
                     <div><b>Type:</b> {{ cluster.prototype.type }}</div>
                     <div>
-                        <b>Targets:</b>
+                        <b>Selected Targets:</b>
                         <ul>
                         {% for target, count in cluster.targets %}
-                            {% if target in cluster.target_wiki %}
-                            <li>{{ target }} ({{ count }}): <a href="{{ cluster.target_wiki[target].url }}">{{ cluster.target_wiki[target].qnode }}</a> ({{ cluster.target_wiki[target].label }})</li>
-                            {% else %}
-                            <li>{{ target }} ({{ count }})</li>
+                            {% if target in cluster.selected_targets %}
+                                {% if target in cluster.target_wiki %}
+                                <li>{{ target }} ({{ count }}):
+                                    Confidence: min: {{ round(cluster.get_target_stats(target)['min'], 2) }},
+                                    max: {{ round(cluster.get_target_stats(target)['max'], 2) }},
+                                    avg: {{ round(cluster.get_target_stats(target)['average'], 2) }},
+                                    median: {{ round(cluster.get_target_stats(target)['median'], 2) }};
+                                    <a href="{{ cluster.target_wiki[target].url }}">{{ cluster.target_wiki[target].qnode }}</a> ({{ cluster.target_wiki[target].label }})</li>
+                                {% else %}
+                                <li>{{ target }} ({{ count }}):
+                                    Confidence: min: {{ round(cluster.get_target_stats(target)['min'], 2) }},
+                                    max: {{ round(cluster.get_target_stats(target)['max'], 2) }},
+                                    avg: {{ round(cluster.get_target_stats(target)['average'], 2) }},
+                                    median: {{ round(cluster.get_target_stats(target)['median'], 2) }}; </li>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                        </ul>
+                        <b>Other Targets:</b>
+                        <ul>
+                        {% for target, count in cluster.targets %}
+                            {% if target not in cluster.selected_targets %}
+                                {% if target in cluster.target_wiki %}
+                                <li>{{ target }} ({{ count }}):
+                                    Confidence: min: {{ round(cluster.get_target_stats(target)['min'], 2) }},
+                                    max: {{ round(cluster.get_target_stats(target)['max'], 2) }},
+                                    avg: {{ round(cluster.get_target_stats(target)['average'], 2) }},
+                                    median: {{ round(cluster.get_target_stats(target)['median'], 2) }};
+                                    <a href="{{ cluster.target_wiki[target].url }}">{{ cluster.target_wiki[target].qnode }}</a> ({{ cluster.target_wiki[target].label }})</li>
+                                {% else %}
+                                <li>{{ target }} ({{ count }}):
+                                    Confidence: min: {{ round(cluster.get_target_stats(target)['min'], 2) }},
+                                    max: {{ round(cluster.get_target_stats(target)['max'], 2) }},
+                                    avg: {{ round(cluster.get_target_stats(target)['average'], 2) }},
+                                    median: {{ round(cluster.get_target_stats(target)['median'], 2) }}; </li>
+                                {% endif %}
                             {% endif %}
                         {% endfor %}
                         </ul>
@@ -49,10 +81,34 @@
                         {% endif %}
                     </div>
                     <div>
-                        <b>QNodes:</b>
+                        <b>Selected QNodes:</b>
                         <ul>
                         {% for qnode, count in cluster.qids %}
-                            <li><a href="{{ cluster.q_urls[qnode] }}">{{ qnode }}</a> ({{ count }})</li>
+                            {% if cluster.q_urls[qnode] in cluster.selected_qnodes %}
+                                <li><a href="{{ cluster.q_urls[qnode] }}">{{ qnode }}</a> ({{ count }}):
+                                    {% if cluster.get_qnode_stats(cluster.q_urls[qnode]) %}
+                                        Confidence: min: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['min'], 2) }},
+                                        max: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['max'], 2) }},
+                                        avg: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['average'], 2) }},
+                                        median: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['median'], 2) }};
+                                    {% endif %}
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        </ul>
+                        <b>Other QNodes:</b>
+                        <ul>
+                        {% for qnode, count in cluster.qids %}
+                            {% if cluster.q_urls[qnode] not in cluster.selected_qnodes %}
+                                <li><a href="{{ cluster.q_urls[qnode] }}">{{ qnode }}</a> ({{ count }}):
+                                    {% if cluster.get_qnode_stats(cluster.q_urls[qnode]) %}
+                                        Confidence: min: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['min'], 2) }},
+                                        max: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['max'], 2) }},
+                                        avg: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['average'], 2) }},
+                                        median: {{ round(cluster.get_qnode_stats(cluster.q_urls[qnode])['median'], 2) }};
+                                    {% endif %}
+                                </li>
+                            {% endif %}
                         {% endfor %}
                         </ul>
                     </div>
@@ -147,8 +203,12 @@
                         {% if member.targets %}
                             <div><b>Targets:</b>
                                 <ul>
-                                {% for target in member.targets %}
-                                    <li>{{ target }}</li>
+                                {% for target, score in member.targets.items() %}
+                                    {% if target in cluster.selected_targets %}
+                                    <li><mark>{{ target }}</mark>: {{ round(score, 2) }}</li>
+                                    {% else %}
+                                    <li>{{ target }}: {{ round(score, 2) }}</li>
+                                    {% endif %}
                                 {% endfor %}
                                 </ul>
                             </div>
@@ -157,7 +217,11 @@
                             <div><b>QNodes:</b></div>
                             {% for qid in member.qids %}
                                 <ul>
-                                    <li><a href="{{ member.q_urls[qid] }}">{{ qid }}</a></li>
+                                    {% if member.q_urls[qid] in cluster.selected_qnodes %}
+                                    <li><mark><a href="{{ member.q_urls[qid] }}">{{ qid }}</a></mark>: {{ round(member.qids[qid], 2) }}</li>
+                                    {% else %}
+                                    <li><a href="{{ member.q_urls[qid] }}">{{ qid }}</a>: {{ round(member.qids[qid], 2) }}</li>
+                                    {% endif %}
                                     <ul>
                                         <li><b>Label:</b> {{ member.q_labels[qid] }}</li>
                                         <li><b>Aliases:</b> {{ member.q_aliases[qid] }}</li>
