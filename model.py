@@ -22,7 +22,7 @@ namespaces = {
     'skos': SKOS,
     'wdt': WDT
 }
-types = namedtuple('AIDATypes', ['Entity', 'Events'])(AIDA.Entity, AIDA.Event)
+types = namedtuple('AIDATypes', ['Entity', 'Events', 'Relation'])(AIDA.Entity, AIDA.Event, AIDA.Relation)
 
 
 class Model:
@@ -84,7 +84,7 @@ class Model:
             query = query.replace('?type', type_.n3())
             query = query.replace('label_string', 'OPTIONAL {?prototype aida:hasName ?label} .')
             query = query.replace('order_by', 'DESC(?memberN)')
-        if type_ == AIDA.Event:
+        if type_ == AIDA.Event or type_ == AIDA.Relation:
             query = query.replace('?type', type_.n3())
             query = query.replace('label_string',
                                   '?s rdf:subject ?prototype ; rdf:predicate rdf:type ; rdf:object ?label .')
@@ -96,6 +96,7 @@ class Model:
             query += " LIMIT " + str(limit)
         if offset:
             query += " OFFSET " + str(offset)
+        print(query)
 
         results = self.__sparql.query(query, namespaces)
         result_gen = (x for x in results if x.cluster)
@@ -109,6 +110,7 @@ class Model:
                 href = u.replace('http://www.isi.edu/gaia', '/cluster')
                 href = href.replace('/entities', '/entities/' + self.repo)
                 href = href.replace('/events', '/events/' + self.repo)
+                href = href.replace('/relations', '/relations/' + self.repo)
             else:
                 href = u.replace('http://www.columbia.edu', '/cluster/' + self.repo)
             if self.graph:
@@ -769,6 +771,32 @@ class ClusterMember:
           ind = pred.find('_')
           pred = pred[ind+1:]
           yield pred, ClusterMember(self.model, event, event_lbl, event_type)
+
+    @property
+    def entity_relations(self):
+        query = """
+        SELECT ?relation ?pred2 ?obj2 ?relation_type (min(?lbl) as ?label)
+        WHERE {
+            ?relation a aida:Relation .
+            ?s1 rdf:subject ?relation ;
+                        rdf:predicate ?pred ;
+                        rdf:object ?obj .
+            ?s2 rdf:subject ?relation ;
+                        rdf:predicate rdf:type ;
+                        rdf:object ?relation_type .
+            ?s3 rdf:subject ?relation ;
+                        rdf:predicate ?pred2 ;
+                        rdf:object ?obj2 .
+            OPTIONAL {?obj2 aida:hasName ?lbl}
+            filter(?s3 != ?s2 && ?s3 != ?s1)
+        }
+        groupby ?relation ?pred2 ?obj2 ?relation_type
+          """
+        for relation, pred, obj, relation_type, label in self.model.sparql.query(query, namespaces, {'obj': self.uri}):
+            _, relation_type = split_uri(relation_type)
+            ind = pred.find('_')
+            pred = pred[ind + 1:]
+            yield relation_type, obj, label
 
     @property
     def cluster(self):

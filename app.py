@@ -51,7 +51,8 @@ def hello_world(repo):
                            repo=repo,
                            graph=graph_uri,
                            entities=model.get_cluster_list(types.Entity),
-                           events=model.get_cluster_list(types.Events))
+                           events=model.get_cluster_list(types.Events),
+                           relations=model.get_cluster_list(types.Relation))
 
 
 @app.route('/js/<path>')
