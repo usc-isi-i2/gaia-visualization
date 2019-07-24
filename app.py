@@ -7,11 +7,11 @@ import setting
 from setting import url_prefix
 import groundtruth as gt
 import debug
-from importer import clusters_import
 import requests
 from rdflib.plugins.stores.sparqlstore import SPARQLStore
 import tmp
 import time_person_label
+import re
 
 
 app = Flask(__name__, static_folder='static')
@@ -189,50 +189,39 @@ def show_entity_gt(repo):
     return render_template('groundtruth.html', url_prefix=url_prefix, repo=repo, graph=graph_uri, cluster=cluster)
 
 
-@app.route('/cluster/import')
-def show_import():
-    return render_template('importer.html', url_prefix=url_prefix, repos=setting.repositories)
+@app.route('/cluster/import-debugger')
+def show_import_debugger():
+    return render_template('import-debugger.html', repos=setting.repositories)
 
 
-@app.route('/import', methods=['POST'])
+@app.route('/import-debugger', methods=['POST'])
 def import_clusters():
     repo = request.form['repo']
     graph_uri = request.form['graph_uri']
-    entity_file = request.files['entity_file']
-    event_file = request.files['event_file']
+    debug_file = request.files['debug_file']
 
-    if repo and graph_uri and entity_file and event_file:
+    if repo and debug_file:
 
-        # create directory for upload
-        data_dir = setting.store_data + '/' + repo
+        # create directory for debug files if doesn't exist
+        data_dir = setting.debug_data
         if not os.path.isdir(data_dir):
             os.makedirs(data_dir)
 
-        # upload file
-        filename = 'entity-clusters.jl'
-        file = os.path.join(data_dir, filename)
-        entity_file.save(file)
-
-        filename = 'event-clusters.jl'
-        file = os.path.join(data_dir, filename)
-        event_file.save(file)
-
-        # to triple store
-        res = clusters_import.create_clusters(setting.endpoint, repo, graph_uri)
-
-        if res == 'success':
-            return '''
-            <!doctype html>
-            <title>Imported</title>
-            <h1>Imported</h1>
-            '''
+        if graph_uri:
+            filename = repo + '-' + re.sub('[^0-9a-zA-Z]+', '-', graph_uri)
         else:
-            return '''
-            <!doctype html>
-            <title>Import Failed</title>
-            <h1>Import Failed</h1>
-            <h2>%s<h2>
-            ''' % res
+            filename = repo
+
+        file = data_dir + '/' + filename + '.jl'
+
+        # upload file
+        debug_file.save(file)
+
+        return '''
+        <!doctype html>
+        <title>Imported</title>
+        <h1>Imported</h1>
+        '''
 
     else:
         return '''
@@ -240,7 +229,6 @@ def import_clusters():
         <title>Invalid</title>
         <h1>Invalid</h1>
         '''
-
 
 @app.route('/groundtruth/<repo>', methods=['GET'])
 def groundtruth(repo):
