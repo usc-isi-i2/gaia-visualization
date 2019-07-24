@@ -1,9 +1,9 @@
-from model import namespaces, sparql
-from setting import name
+from model import namespaces
+from setting import repo
 import json
 
 
-def count_query(query):
+def count_query(sparql, query):
     for count, in sparql.query(query, namespaces):
         return int(count)
 
@@ -25,7 +25,7 @@ class ReportMemory(dict):
 
 
 class Report:
-    name = name
+    name = repo
 
     def __init__(self, update=False):
         self.mem = ReportMemory(update)
@@ -92,7 +92,7 @@ class Report:
         return self.mem[name]
 
     @staticmethod
-    def __num_of_entities_by_type(type_, cluster=False):
+    def __num_of_entities_by_type(sparql, type_, cluster=False):
         filter_ = '?cluster aida:prototype ?e' if cluster else 'FILTER NOT EXISTS { ?cluster aida:prototype ?e }'
         query = '''
         SELECT ?cate (COUNT(?e) AS ?eN)
@@ -107,7 +107,7 @@ class Report:
         '''.replace('?type', type_).replace('filter', filter_)
         d = {}
         for cate, count in sparql.query(query, namespaces):
-            cate = cate.replace('https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/SeedlingOntology#', '')
+            cate = cate.replace('https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/SeedlingOntology#', '')
             d[cate] = int(count)
         return d
 
@@ -166,7 +166,7 @@ class Report:
     @property
     def num_of_self_connect_entity(self):
         query = '''
-        PREFIX aida: <https://tac.nist.gov/tracks/SM-KBP/2018/ontologies/InterchangeOntology#>
+        PREFIX aida: <https://tac.nist.gov/tracks/SM-KBP/2019/ontologies/InterchangeOntology#>
         PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
 
         SELECT ?relation ?entity

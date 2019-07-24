@@ -1,7 +1,7 @@
  <html>
 	<head>
 		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/css/bootstrap.min.css">
-		<link rel="stylesheet" href="/css/graphviz.svg.css">
+		<link rel="stylesheet" href="{{ url_prefix }}/css/graphviz.svg.css">
     <title>Viz: Clusters with sources</title>
 	</head>
 	<body>
@@ -11,7 +11,7 @@
 		<script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-mousewheel/master/jquery.mousewheel.min.js"></script>
 		<script type="text/javascript" src="https://cdn.rawgit.com/jquery/jquery-color/master/jquery.color.js"></script>
 		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.4/js/bootstrap.min.js"></script>
-		<script type="text/javascript" src="/js/jquery.graphviz.svg.js"></script>
+		<script type="text/javascript" src="{{ url_prefix }}/js/jquery.graphviz.svg.js"></script>
 		<script type="text/javascript">
  		 $(document).ready(function() {
              $(document).on("click", function(e) {
@@ -25,7 +25,7 @@
              var maxWidth = 0;
              var maxHeight = 0;
              graph.graphviz({
-                 url: "/img/{{ name }}.svg",
+                 url: "{{ url_prefix }}/img/{{ name }}.svg",
                  ready: function() {
                      let gv = this;
                      maxWidth = graph.children()[0].viewBox.baseVal.width;

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <meta charset="UTF-8">
+    <title>Cluster</title>
+</head>
+<body>
+    <div class="container-fluid">
+        {% if entities or events %}
+        <div class="row">
+            <div class="col">
+                <h1>{{ repo }}
+                    {% if graph %}
+                    {{ graph }}
+                    {% endif %}
+                    Clusters Top10</h1>
+                {% if entities %}
+                    <h2>Entities</h2>
+                    <ul>
+                        {% for cluster in entities %}
+                            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ url_prefix }}{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+                        {% endfor %}
+                    </ul>
+                    {% if graph %}
+                        <a href="{{ url_prefix }}/list/entity/{{ repo }}?g={{ graph }}">Show more...</a>
+                    {% else %}
+                        <a href="{{ url_prefix }}/list/entity/{{ repo }}">Show more...</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <hr>
+                {% if events %}
+                    <h2>Events</h2>
+                    <ul>
+                        {% for cluster in events %}
+                            <li>{{ cluster.label }} [{{ cluster.count }}] (<a href="{{ url_prefix }}{{ cluster.href }}">{{ cluster.uri }}</a>)</li>
+                        {% endfor %}
+                    </ul>
+                    {% if graph %}
+                        <a href="{{ url_prefix }}/list/event/{{ repo }}?g={{ graph }}">Show more...</a>
+                    {% else %}
+                        <a href="{{ url_prefix }}/list/event/{{ repo }}">Show more...</a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

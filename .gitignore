@@ -1,2 +1,9 @@
 .idea
 __pycache__
+static/img
+cluster.pkl
+pkl
+debug
+gt
+venv
+store_data

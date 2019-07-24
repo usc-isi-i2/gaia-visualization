@@ -25,7 +25,7 @@ class SourceContext:
 
 
 class LTFSourceContext(SourceContext):
-    source_path = Path('ltf')
+    source_path = Path('/lfs1/gaia/m9copora/ltf')
 
     def __init__(self, doc_id):
         super().__init__(doc_id)
